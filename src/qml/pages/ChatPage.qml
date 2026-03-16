@@ -14,7 +14,7 @@ import "../logic/ApiClient.js" as ApiClient
 Kirigami.Page {
     id: root
 
-    title: i18n("Chat")
+    title: getProviderDisplayName()
 
     property string currentModel: ''
     property var listModelController: null
@@ -26,6 +26,8 @@ Kirigami.Page {
     property string currentProvider: settings.provider
     property bool thinkingEnabled: !settings.openaiCompatibleDisableThinking
 
+    padding: 0
+
     QtObject {
         id: settings
         property string provider: "ollama"
@@ -35,6 +37,13 @@ Kirigami.Page {
         property string openaiCompatibleToken: ""
         property string openaiCompatibleModel: ""
         property bool openaiCompatibleDisableThinking: false
+    }
+
+    function getProviderDisplayName() {
+        if (currentProvider === "ollama") return "Ollama"
+        if (currentProvider === "openclaw") return "OpenClaw"
+        if (currentProvider === "openai-compatible") return settings.openaiCompatibleModel || "OpenAI"
+        return "ChatQT"
     }
 
     function isProviderConfigured() {
@@ -159,6 +168,14 @@ Kirigami.Page {
         promptArray = [];
     }
 
+    function openSettings() {
+        applicationWindow().pageStack.pushDialogLayer(Qt.resolvedUrl("../settings/SettingsPage.qml"), {
+            settings: settings
+        }, {
+            title: i18n("Settings")
+        });
+    }
+
     Component.onCompleted: {
         if (currentProvider === "ollama") {
             getModels();
@@ -167,16 +184,9 @@ Kirigami.Page {
 
     actions: [
         Kirigami.Action {
-            text: i18n("Clear chat")
-            icon.name: "edit-clear"
-            onTriggered: root.clearChat()
-        },
-        Kirigami.Action {
-            text: i18n("Disable auto scroll")
-            icon.name: "transform-move-vertical"
-            checkable: true
-            checked: root.disableAutoScroll
-            onTriggered: root.disableAutoScroll = !root.disableAutoScroll
+            text: i18n("Settings")
+            icon.name: "settings-configure"
+            onTriggered: root.openSettings()
         }
     ]
 
@@ -184,41 +194,14 @@ Kirigami.Page {
         anchors.fill: parent
         spacing: 0
 
-        Header {
-            id: header
-
-            Layout.fillWidth: true
-
-            isProviderConfigured: root.isProviderConfigured()
-            isLoading: root.isLoading
-            currentProvider: root.currentProvider
-            hasLocalModel: root.hasLocalModel
-            modelsArray: root.modelsArray
-            currentModel: root.currentModel
-            thinkingEnabled: root.thinkingEnabled
-
-            onClearChatRequested: root.clearChat()
-            onModelSelected: function(modelValue) {
-                root.currentModel = modelValue;
-                root.clearChat();
-            }
-            onSettingsRequested: {
-                applicationWindow().pageStack.pushDialogLayer(Qt.resolvedUrl("../settings/SettingsPage.qml"), {
-                    settings: settings
-                }, {
-                    title: i18n("Settings")
-                });
-            }
-        }
-
         ListView {
             id: listView
 
             Layout.fillWidth: true
             Layout.fillHeight: true
-            Layout.margins: Kirigami.Units.smallSpacing
+            Layout.margins: Kirigami.Units.largeSpacing
 
-            spacing: Kirigami.Units.smallSpacing
+            spacing: Kirigami.Units.largeSpacing
             clip: true
 
             Kirigami.PlaceholderMessage {
@@ -237,7 +220,7 @@ Kirigami.Page {
             }
 
             delegate: ChatMessage {
-                width: listView.width
+                width: listView.width - Kirigami.Units.largeSpacing * 2
                 messageText: ApiClient.preprocessMarkdown(content)
                 senderName: name
             }
@@ -245,11 +228,15 @@ Kirigami.Page {
             Controls.ScrollBar.vertical: Controls.ScrollBar {}
         }
 
+        Kirigami.Separator {
+            Layout.fillWidth: true
+        }
+
         MessageInput {
             id: messageInput
 
             Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.smallSpacing
+            Layout.margins: Kirigami.Units.largeSpacing
 
             isProviderConfigured: root.isProviderConfigured()
             isLoading: root.isLoading
@@ -262,7 +249,9 @@ Kirigami.Page {
         Controls.Button {
             Layout.alignment: Qt.AlignHCenter
             Layout.fillWidth: true
-            Layout.margins: Kirigami.Units.smallSpacing
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            Layout.rightMargin: Kirigami.Units.largeSpacing
+            Layout.bottomMargin: Kirigami.Units.largeSpacing
 
             text: i18n("Refresh models list")
             visible: currentProvider === "ollama" && !hasLocalModel

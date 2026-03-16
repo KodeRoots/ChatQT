@@ -8,7 +8,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
-Rectangle {
+Kirigami.AbstractCard {
     id: root
 
     property string messageText: ""
@@ -16,87 +16,63 @@ Rectangle {
 
     readonly property bool isUser: senderName === "User"
 
-    implicitHeight: messageColumn.implicitHeight + Kirigami.Units.largeSpacing * 2
-    radius: Kirigami.Units.cornerRadius
-    color: isUser ? Kirigami.Theme.highlightColor : Kirigami.Theme.backgroundColor
+    Layout.fillWidth: true
 
-    border.width: !isUser ? 1 : 0
-    border.color: Kirigami.Theme.textColor
+    showClickFeedback: false
 
-    RowLayout {
-        anchors.fill: parent
-        anchors.margins: Kirigami.Units.smallSpacing
+    contentItem: ColumnLayout {
         spacing: Kirigami.Units.smallSpacing
 
-        Kirigami.Icon {
-            source: isUser ? "user-identity" : "dialog-messages"
-            Layout.preferredWidth: Kirigami.Units.iconSizes.smallMedium
-            Layout.preferredHeight: Kirigami.Units.iconSizes.smallMedium
-            Layout.alignment: Qt.AlignTop
-            color: isUser ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+        Controls.Label {
+            text: senderName
+            font.weight: Font.Bold
+            font.pointSize: Kirigami.Theme.smallFont.pointSize
+            color: isUser ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
         }
 
-        ColumnLayout {
-            id: messageColumn
+        TextEdit {
+            id: textMessage
 
             Layout.fillWidth: true
-            spacing: Kirigami.Units.smallSpacing / 2
 
-            Controls.Label {
-                text: senderName
-                font.weight: Font.Bold
-                font.pointSize: Kirigami.Theme.smallFont.pointSize
-                color: isUser ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+            topPadding: Kirigami.Units.smallSpacing
+            bottomPadding: Kirigami.Units.smallSpacing
+
+            readOnly: true
+            wrapMode: TextEdit.WordWrap
+            text: root.messageText
+            textFormat: TextEdit.MarkdownText
+            color: Kirigami.Theme.textColor
+            selectByMouse: true
+
+            onLinkActivated: function(link) {
+                Qt.openUrlExternally(link)
             }
 
-            TextEdit {
-                id: textMessage
-
-                Layout.fillWidth: true
-
-                readOnly: true
-                wrapMode: TextEdit.WordWrap
-                text: root.messageText
-                textFormat: TextEdit.MarkdownText
-                color: isUser ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
-                selectByMouse: true
-
-                onLinkActivated: function(link) {
-                    Qt.openUrlExternally(link)
-                }
-
-                HoverHandler {
-                    id: hoverHandler
-                }
-
-                Controls.ToolTip.visible: hovered && copyButton.hovered
-                Controls.ToolTip.text: i18n("Click to copy")
-                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+            HoverHandler {
+                id: hoverHandler
             }
         }
+    }
 
-        Controls.ToolButton {
-            id: copyButton
+    Controls.ToolButton {
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.margins: Kirigami.Units.smallSpacing
 
-            Layout.alignment: Qt.AlignTop
-            visible: hoverHandler.hovered || hovered
+        icon.name: "edit-copy-symbolic"
+        display: Controls.AbstractButton.IconOnly
+        text: i18n("Copy")
+        visible: hoverHandler.hovered
 
-            icon.name: "edit-copy-symbolic"
-            display: Controls.AbstractButton.IconOnly
-            text: i18n("Copy")
-
-            onClicked: {
-                textMessage.selectAll();
-                textMessage.copy();
-                textMessage.deselect();
-            }
-
-            Controls.ToolTip.text: text
-            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-            Controls.ToolTip.visible: hovered
-
-            Kirigami.Theme.inherit: isUser
-            Kirigami.Theme.textColor: isUser ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+        onClicked: {
+            textMessage.selectAll();
+            textMessage.copy();
+            textMessage.deselect();
         }
+
+        Controls.ToolTip.text: text
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+        Controls.ToolTip.visible: hovered
     }
 }

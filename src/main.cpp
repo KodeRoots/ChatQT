@@ -7,11 +7,9 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQmlError>
-#include <QQuickWindow>
 #include <QQuickStyle>
 #include <QIcon>
 #include <QUrl>
-#include <QCoreApplication>
 
 #include <KAboutData>
 #include <KLocalizedContext>

@@ -8,7 +8,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
-Rectangle {
+RowLayout {
     id: root
 
     signal sendMessage(string message)
@@ -16,87 +16,71 @@ Rectangle {
     property bool isProviderConfigured: false
     property bool isLoading: false
 
-    implicitHeight: inputLayout.implicitHeight + Kirigami.Units.largeSpacing * 2
-    radius: Kirigami.Units.cornerRadius
+    spacing: Kirigami.Units.smallSpacing
 
-    color: Kirigami.Theme.backgroundColor
-    border.width: 1
-    border.color: Kirigami.Theme.textColor
+    Controls.TextArea {
+        id: messageField
 
-    RowLayout {
-        id: inputLayout
+        Layout.fillWidth: true
+        Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 3)
 
-        anchors.fill: parent
-        anchors.margins: Kirigami.Units.smallSpacing
-        spacing: Kirigami.Units.smallSpacing
+        visible: root.isProviderConfigured
+        enabled: root.isProviderConfigured && !root.isLoading
 
-        Controls.ScrollView {
-            Layout.fillWidth: true
-            Layout.preferredHeight: Math.min(messageField.implicitHeight, Kirigami.Units.gridUnit * 6)
+        placeholderText: i18n("Type your message...")
+        wrapMode: Controls.TextArea.Wrap
 
-            visible: root.isProviderConfigured
-            clip: true
-
-            Controls.TextArea {
-                id: messageField
-
-                placeholderText: i18n("Type your message...")
-                wrapMode: Controls.TextArea.Wrap
-                enabled: root.isProviderConfigured && !root.isLoading
-
-                Keys.onReturnPressed: {
-                    if (event.modifiers & Qt.ControlModifier) {
-                        root.sendMessage(messageField.text)
-                    } else {
-                        event.accepted = false;
-                    }
-                }
-
-                Controls.BusyIndicator {
-                    anchors.centerIn: parent
-                    running: root.isLoading
-                    implicitWidth: Kirigami.Units.iconSizes.medium
-                    implicitHeight: Kirigami.Units.iconSizes.medium
-                }
+        Keys.onReturnPressed: {
+            if (event.modifiers & Qt.ControlModifier) {
+                root.sendMessage(messageField.text)
+                messageField.text = ""
+            } else {
+                event.accepted = false;
             }
         }
 
-        Controls.Button {
-            id: sendButton
+        Controls.BusyIndicator {
+            anchors.centerIn: parent
+            running: root.isLoading
+            implicitWidth: Kirigami.Units.iconSizes.medium
+            implicitHeight: Kirigami.Units.iconSizes.medium
+        }
+    }
 
-            visible: root.isProviderConfigured
-            enabled: root.isProviderConfigured && !root.isLoading && messageField.text.trim()
+    Controls.Button {
+        Layout.alignment: Qt.AlignBottom
+        
+        Layout.fillHeight: true
 
-            text: i18n("Send")
-            icon.name: "document-send"
+        visible: root.isProviderConfigured
+        enabled: root.isProviderConfigured && !root.isLoading && messageField.text.trim()
 
-            display: Controls.AbstractButton.TextBesideIcon
+        text: i18n("Send")
+        icon.name: "document-send"
+        display: Controls.AbstractButton.IconOnly
 
-            Controls.ToolTip.text: i18n("Send message (Ctrl+Enter)")
-            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-            Controls.ToolTip.visible: hovered
+        Controls.ToolTip.text: i18n("Send message (Ctrl+Enter)")
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+        Controls.ToolTip.visible: hovered
 
-            onClicked: {
-                if (messageField.text.trim()) {
-                    root.sendMessage(messageField.text)
-                }
+        onClicked: {
+            if (messageField.text.trim()) {
+                root.sendMessage(messageField.text)
+                messageField.text = ""
             }
         }
+    }
 
-        Controls.Label {
-            Layout.fillWidth: true
-            visible: !root.isProviderConfigured
-            text: i18n("Configure a provider to start chatting")
-            color: Kirigami.Theme.disabledTextColor
-            horizontalAlignment: Qt.AlignHCenter
-        }
+    Controls.Label {
+        Layout.fillWidth: true
+        visible: !root.isProviderConfigured
+        text: i18n("Configure a provider to start chatting")
+        color: Kirigami.Theme.disabledTextColor
+        horizontalAlignment: Qt.AlignHCenter
+        wrapMode: Text.WordWrap
     }
 
     function clearText() {
         messageField.text = ''
-    }
-
-    function getText() {
-        return messageField.text
     }
 }
