@@ -1,0 +1,11 @@
+<RCC>
+    <qresources prefix="/">
+        <file>qml/main.qml</file>
+        <file>qml/pages/ChatPage.qml</file>
+        <file>qml/components/ChatMessage.qml</file>
+        <file>qml/components/MessageInput.qml</file>
+        <file>qml/components/Header.qml</file>
+        <file>qml/logic/ApiClient.js</file>
+        <file>qml/settings/SettingsPage.qml</file>
+    </qresources>
+</RCC>
