@@ -43,7 +43,7 @@ ecm_setup_version(${PROJECT_VERSION}
 qt_add_executable(chatqt src/main.cpp)
 
 qt_add_qml_module(chatqt
-    URI org.kde.chatqt
+    URI io.github.denysmb.chatqt
     VERSION 1.0
     QML_FILES
         src/qml/main.qml
@@ -69,6 +69,6 @@ target_link_libraries(chatqt PRIVATE
 )
 
 install(TARGETS chatqt ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
-install(FILES resources/icons/org.kde.chatqt.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
+install(FILES resources/icons/io.github.denysmb.chatqt.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
