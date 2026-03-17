@@ -9,12 +9,13 @@ import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
 import "../components"
+import "../logic"
 import "../logic/ApiClient.js" as ApiClient
 
 Kirigami.Page {
     id: root
 
-    title: getProviderDisplayName()
+    title: appSettings.getProviderDisplayName()
 
     property string currentModel: ''
     property var listModelController: null
@@ -23,27 +24,17 @@ Kirigami.Page {
     property bool isLoading: false
     property bool hasLocalModel: false
     property bool disableAutoScroll: false
-    property string currentProvider: settings.provider
-    property bool thinkingEnabled: !settings.openaiCompatibleDisableThinking
+    property string currentProvider: appSettings.provider
+    property bool thinkingEnabled: !appSettings.openaiCompatibleDisableThinking
 
     padding: 0
 
-    QtObject {
-        id: settings
-        property string provider: "ollama"
-        property string openclawUrl: ""
-        property string openclawToken: ""
-        property string openaiCompatibleUrl: ""
-        property string openaiCompatibleToken: ""
-        property string openaiCompatibleModel: ""
-        property bool openaiCompatibleDisableThinking: false
+    AppSettings {
+        id: appSettings
     }
 
     function getProviderDisplayName() {
-        if (currentProvider === "ollama") return "Ollama"
-        if (currentProvider === "openclaw") return "OpenClaw"
-        if (currentProvider === "openai-compatible") return settings.openaiCompatibleModel || "OpenAI"
-        return "ChatQT"
+        return appSettings.getProviderDisplayName()
     }
 
     function isProviderConfigured() {
@@ -51,11 +42,11 @@ Kirigami.Page {
         if (provider === "ollama") {
             return hasLocalModel;
         } else if (provider === "openclaw") {
-            return settings.openclawUrl && settings.openclawToken;
+            return appSettings.openclawUrl && appSettings.openclawToken;
         } else if (provider === "openai-compatible") {
-            return settings.openaiCompatibleUrl &&
-                   settings.openaiCompatibleToken &&
-                   settings.openaiCompatibleModel;
+            return appSettings.openaiCompatibleUrl &&
+                   appSettings.openaiCompatibleToken &&
+                   appSettings.openaiCompatibleModel;
         }
         return false;
     }
@@ -118,8 +109,8 @@ Kirigami.Page {
             );
         } else if (currentProvider === "openclaw") {
             ApiClient.requestOpenAICompatible(
-                settings.openclawUrl,
-                settings.openclawToken,
+                appSettings.openclawUrl,
+                appSettings.openclawToken,
                 "openclaw",
                 promptArray,
                 true,
@@ -131,9 +122,9 @@ Kirigami.Page {
             );
         } else if (currentProvider === "openai-compatible") {
             ApiClient.requestOpenAICompatible(
-                settings.openaiCompatibleUrl,
-                settings.openaiCompatibleToken,
-                settings.openaiCompatibleModel,
+                appSettings.openaiCompatibleUrl,
+                appSettings.openaiCompatibleToken,
+                appSettings.openaiCompatibleModel,
                 promptArray,
                 thinkingEnabled,
                 null,
@@ -170,7 +161,7 @@ Kirigami.Page {
 
     function openSettings() {
         applicationWindow().pageStack.pushDialogLayer(Qt.resolvedUrl("../settings/SettingsPage.qml"), {
-            settings: settings
+            settings: appSettings
         }, {
             title: i18n("Settings")
         });

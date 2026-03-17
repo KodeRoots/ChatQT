@@ -51,6 +51,7 @@ qt_add_qml_module(chatqt
         src/qml/components/ChatMessage.qml
         src/qml/components/MessageInput.qml
         src/qml/settings/SettingsPage.qml
+        src/qml/logic/AppSettings.qml
         src/qml/logic/ApiClient.js
 )
 
