@@ -8,7 +8,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
-Kirigami.Page {
+Kirigami.ScrollablePage {
     id: root
 
     title: i18n("Settings")
@@ -17,7 +17,6 @@ Kirigami.Page {
 
     Kirigami.FormLayout {
         anchors.fill: parent
-        anchors.margins: Kirigami.Units.largeSpacing
 
         Kirigami.Separator {
             Kirigami.FormData.label: i18n("AI Provider")
@@ -200,7 +199,7 @@ Kirigami.Page {
                 icon.name: "dialog-ok"
 
                 onClicked: {
-                    applicationWindow().pageStack.pop()
+                    root.closeDialog()
                 }
             }
 
@@ -209,7 +208,7 @@ Kirigami.Page {
                 icon.name: "dialog-cancel"
 
                 onClicked: {
-                    applicationWindow().pageStack.pop()
+                    root.closeDialog()
                 }
             }
         }

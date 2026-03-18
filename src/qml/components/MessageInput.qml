@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
@@ -18,39 +19,77 @@ RowLayout {
 
     spacing: Kirigami.Units.smallSpacing
 
-    Controls.TextArea {
-        id: messageField
+    Item {
+        id: container
 
         Layout.fillWidth: true
-        Layout.preferredHeight: Math.max(implicitHeight, Kirigami.Units.gridUnit * 3)
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 6
 
         visible: root.isProviderConfigured
         enabled: root.isProviderConfigured && !root.isLoading
 
-        placeholderText: i18n("Type your message...")
-        wrapMode: Controls.TextArea.Wrap
+        Kirigami.Theme.colorSet: Kirigami.Theme.View
+        Kirigami.Theme.inherit: false
 
-        Keys.onReturnPressed: {
-            if (event.modifiers & Qt.ControlModifier) {
-                root.sendMessage(messageField.text)
-                messageField.text = ""
-            } else {
-                event.accepted = false;
+        Rectangle {
+            anchors.fill: parent
+
+            color: Kirigami.Theme.backgroundColor
+            radius: Kirigami.Units.smallSpacing
+            border.width: 1
+            border.color: messageField.activeFocus || messageField.hovered ? Kirigami.Theme.activeTextColor : Qt.rgba(Kirigami.Theme.disabledTextColor.r, Kirigami.Theme.disabledTextColor.g, Kirigami.Theme.disabledTextColor.b, 0.3)
+
+            Flickable {
+                id: flickable
+
+                anchors.fill: parent
+                anchors.margins: 1
+
+                flickableDirection: Flickable.VerticalFlick
+                clip: true
+
+                contentWidth: width
+                contentHeight: messageField.implicitHeight
+
+                ScrollBar.vertical: Controls.ScrollBar {
+                    id: verticalScrollBar
+                    policy: Controls.ScrollBar.AsNeeded
+                }
+
+                TextArea.flickable: TextArea {
+                    id: messageField
+
+                    placeholderText: i18n("Type your message...")
+                    wrapMode: TextArea.Wrap
+                    rightPadding: verticalScrollBar.visible ? verticalScrollBar.width + Kirigami.Units.smallSpacing : Kirigami.Units.smallSpacing
+                    leftPadding: Kirigami.Units.smallSpacing
+                    topPadding: Kirigami.Units.smallSpacing
+                    bottomPadding: Kirigami.Units.smallSpacing
+                    background: null
+
+                    Keys.onReturnPressed: {
+                        if (event.modifiers & Qt.ControlModifier) {
+                            root.sendMessage(messageField.text)
+                            messageField.text = ""
+                        } else {
+                            event.accepted = false;
+                        }
+                    }
+
+                    Controls.BusyIndicator {
+                        anchors.centerIn: parent
+                        running: root.isLoading
+                        implicitWidth: Kirigami.Units.iconSizes.medium
+                        implicitHeight: Kirigami.Units.iconSizes.medium
+                    }
+                }
             }
-        }
-
-        Controls.BusyIndicator {
-            anchors.centerIn: parent
-            running: root.isLoading
-            implicitWidth: Kirigami.Units.iconSizes.medium
-            implicitHeight: Kirigami.Units.iconSizes.medium
         }
     }
 
     Controls.Button {
         Layout.alignment: Qt.AlignBottom
-        
-        Layout.fillHeight: true
+        Layout.preferredHeight: container.height
 
         visible: root.isProviderConfigured
         enabled: root.isProviderConfigured && !root.isLoading && messageField.text.trim()
