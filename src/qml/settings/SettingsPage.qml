@@ -17,13 +17,12 @@ Kirigami.ScrollablePage {
 
     property var settings: null
 
-    leftPadding: 0
-    rightPadding: 0
-    topPadding: Kirigami.Units.gridUnit
-    bottomPadding: Kirigami.Units.gridUnit
+    padding: 0
 
-    width: applicationWindow().width
-    Kirigami.ColumnView.fillWidth: true
+    Kirigami.ColumnView.pinned: true
+    Kirigami.ColumnView.preferredWidth: Kirigami.Units.gridUnit * 18
+    Kirigami.ColumnView.minimumWidth: Kirigami.Units.gridUnit * 12
+    Kirigami.ColumnView.maximumWidth: Kirigami.Units.gridUnit * 22
 
     Component {
         id: generalPage
@@ -42,10 +41,6 @@ Kirigami.ScrollablePage {
 
     ColumnLayout {
         spacing: 0
-
-        FormCard.FormHeader {
-            title: i18nc("@title:group", "Configuration")
-        }
 
         FormCard.FormCard {
             Layout.fillWidth: true

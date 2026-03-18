@@ -16,6 +16,8 @@ Kirigami.ScrollablePage {
 
     property var settings: null
 
+    Kirigami.ColumnView.fillWidth: true
+
     Kirigami.FormLayout {
         anchors.fill: parent
 
