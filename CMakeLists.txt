@@ -35,6 +35,8 @@ find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
     Crash
 )
 
+find_package(KF6KirigamiAddons REQUIRED)
+
 ecm_setup_version(${PROJECT_VERSION}
     VARIABLE_PREFIX CHATQT
     VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/chatqt_version.h"
@@ -51,6 +53,9 @@ qt_add_qml_module(chatqt
         src/qml/components/ChatMessage.qml
         src/qml/components/MessageInput.qml
         src/qml/settings/SettingsPage.qml
+        src/qml/settings/SettingsGeneral.qml
+        src/qml/settings/SettingsOpenClaw.qml
+        src/qml/settings/SettingsOpenAICompatible.qml
         src/qml/logic/AppSettings.qml
         src/qml/logic/ApiClient.js
 )

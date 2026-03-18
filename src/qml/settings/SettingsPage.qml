@@ -4,212 +4,84 @@
 */
 
 import QtQuick
-import QtQuick.Controls as Controls
+import QtQuick.Controls as QQC2
 import QtQuick.Layouts
+
 import org.kde.kirigami as Kirigami
+import org.kde.kirigamiaddons.formcard as FormCard
 
 Kirigami.ScrollablePage {
     id: root
 
-    title: i18n("Settings")
+    title: i18nc("@title", "Settings")
 
     property var settings: null
 
-    Kirigami.FormLayout {
-        anchors.fill: parent
+    leftPadding: 0
+    rightPadding: 0
+    topPadding: Kirigami.Units.gridUnit
+    bottomPadding: Kirigami.Units.gridUnit
 
-        Kirigami.Separator {
-            Kirigami.FormData.label: i18n("AI Provider")
-            Kirigami.FormData.isSection: true
-        }
+    width: applicationWindow().width
+    Kirigami.ColumnView.fillWidth: true
 
-        Controls.ComboBox {
-            id: providerComboBox
-
-            Kirigami.FormData.label: i18nc("@title:group", "Provider:")
-
-            model: [
-                { text: i18n("Ollama"), value: "ollama" },
-                { text: i18n("OpenClaw"), value: "openclaw" },
-                { text: i18n("OpenAI Compatible"), value: "openai-compatible" }
-            ]
-
-            textRole: "text"
-            valueRole: "value"
-
-            onCurrentValueChanged: {
-                if (root.settings) {
-                    root.settings.provider = currentValue
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    currentIndex = indexOfValue(root.settings.provider || "ollama")
-                }
-            }
-        }
-
-        Kirigami.Separator {
-            Kirigami.FormData.label: i18n("OpenClaw Settings")
-            Kirigami.FormData.isSection: true
-            visible: providerComboBox.currentValue === "openclaw"
-        }
-
-        Controls.TextField {
-            id: openclawUrlField
-
-            visible: providerComboBox.currentValue === "openclaw"
-            Kirigami.FormData.label: i18n("URL:")
-
-            placeholderText: "http://127.0.0.1:18789"
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openclawUrl = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openclawUrl || ""
-                }
-            }
-        }
-
-        Controls.TextField {
-            id: openclawTokenField
-
-            visible: providerComboBox.currentValue === "openclaw"
-            Kirigami.FormData.label: i18n("Token:")
-
-            placeholderText: i18n("Enter your token")
-            echoMode: Controls.TextField.Password
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openclawToken = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openclawToken || ""
-                }
-            }
-        }
-
-        Kirigami.Separator {
-            Kirigami.FormData.label: i18n("OpenAI Compatible Settings")
-            Kirigami.FormData.isSection: true
-            visible: providerComboBox.currentValue === "openai-compatible"
-        }
-
-        Controls.TextField {
-            id: openaiCompatibleUrlField
-
-            visible: providerComboBox.currentValue === "openai-compatible"
-            Kirigami.FormData.label: i18n("API URL:")
-
-            placeholderText: "https://api.example.com"
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleUrl = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openaiCompatibleUrl || ""
-                }
-            }
-        }
-
-        Controls.TextField {
-            id: openaiCompatibleTokenField
-
-            visible: providerComboBox.currentValue === "openai-compatible"
-            Kirigami.FormData.label: i18n("API Token:")
-
-            placeholderText: i18n("Enter your API token")
-            echoMode: Controls.TextField.Password
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleToken = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openaiCompatibleToken || ""
-                }
-            }
-        }
-
-        Controls.TextField {
-            id: openaiCompatibleModelField
-
-            visible: providerComboBox.currentValue === "openai-compatible"
-            Kirigami.FormData.label: i18n("Model:")
-
-            placeholderText: "gpt-4"
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleModel = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openaiCompatibleModel || ""
-                }
-            }
-        }
-
-        Controls.CheckBox {
-            visible: providerComboBox.currentValue === "openai-compatible"
-            Kirigami.FormData.label: i18n("Enable thinking:")
-
-            checked: root.settings ? !root.settings.openaiCompatibleDisableThinking : true
-
-            onCheckedChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleDisableThinking = !checked
-                }
-            }
-
-            Controls.ToolTip.text: i18n("Toggle thinking/reasoning mode")
-            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-            Controls.ToolTip.visible: hovered
-        }
+    Component {
+        id: generalPage
+        SettingsGeneral {}
     }
 
-    footer: Controls.ToolBar {
-        RowLayout {
-            anchors.fill: parent
-            anchors.margins: Kirigami.Units.smallSpacing
+    Component {
+        id: openclawPage
+        SettingsOpenClaw {}
+    }
 
-            Item { Layout.fillWidth: true }
+    Component {
+        id: openaiCompatiblePage
+        SettingsOpenAICompatible {}
+    }
 
-            Controls.Button {
-                text: i18n("Save")
-                icon.name: "dialog-ok"
+    ColumnLayout {
+        spacing: 0
 
-                onClicked: {
-                    root.closeDialog()
-                }
+        FormCard.FormHeader {
+            title: i18nc("@title:group", "Configuration")
+        }
+
+        FormCard.FormCard {
+            Layout.fillWidth: true
+
+            FormCard.FormButtonDelegate {
+                id: generalButton
+                text: i18nc("@action:button", "General")
+                description: i18nc("@info:whatsthis", "Select the active AI provider")
+                icon.name: "preferences-system"
+                onClicked: applicationWindow().pageStack.push(generalPage, {
+                    settings: root.settings
+                })
             }
 
-            Controls.Button {
-                text: i18n("Cancel")
-                icon.name: "dialog-cancel"
+            FormCard.FormDelegateSeparator { above: generalButton; below: openclawButton }
 
-                onClicked: {
-                    root.closeDialog()
-                }
+            FormCard.FormButtonDelegate {
+                id: openclawButton
+                text: i18nc("@action:button", "OpenClaw")
+                description: i18nc("@info:whatsthis", "Configure OpenClaw URL and token")
+                icon.name: "network-server"
+                onClicked: applicationWindow().pageStack.push(openclawPage, {
+                    settings: root.settings
+                })
+            }
+
+            FormCard.FormDelegateSeparator { above: openclawButton; below: openaiCompatibleButton }
+
+            FormCard.FormButtonDelegate {
+                id: openaiCompatibleButton
+                text: i18nc("@action:button", "OpenAI Compatible")
+                description: i18nc("@info:whatsthis", "Configure OpenAI-compatible API settings")
+                icon.name: "network-connect"
+                onClicked: applicationWindow().pageStack.push(openaiCompatiblePage, {
+                    settings: root.settings
+                })
             }
         }
     }
