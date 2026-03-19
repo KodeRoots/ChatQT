@@ -39,49 +39,61 @@ Kirigami.ScrollablePage {
         SettingsOpenAICompatible {}
     }
 
-    ColumnLayout {
-        spacing: 0
-        anchors.fill: applicationWindow().pageStack.wideMode ? undefined : parent
-        Layout.fillWidth: true
-        Layout.alignment: Qt.AlignVCenter
+    FormCard.FormCard {
+        id: formCard
+        width: parent.width
 
-        FormCard.FormCard {
-            Layout.alignment: Qt.AlignVCenter
-            Layout.fillWidth: true
-
-            FormCard.FormButtonDelegate {
-                id: generalButton
-                text: i18nc("@action:button", "General")
-                description: i18nc("@info:whatsthis", "Select the active AI provider")
-                icon.name: "preferences-system"
-                onClicked: applicationWindow().pageStack.push(generalPage, {
-                    settings: root.settings
-                })
+        states: [
+            State {
+                name: "centered"
+                when: !applicationWindow().pageStack.wideMode
+                AnchorChanges {
+                    target: formCard
+                    anchors.verticalCenter: formCard.parent.verticalCenter
+                }
+            },
+            State {
+                name: "top"
+                when: applicationWindow().pageStack.wideMode
+                AnchorChanges {
+                    target: formCard
+                    anchors.top: formCard.parent.top
+                }
             }
+        ]
 
-            FormCard.FormDelegateSeparator { above: generalButton; below: openclawButton }
+        FormCard.FormButtonDelegate {
+            id: generalButton
+            text: i18nc("@action:button", "General")
+            description: i18nc("@info:whatsthis", "Select the active AI provider")
+            icon.name: "preferences-system"
+            onClicked: applicationWindow().pageStack.push(generalPage, {
+                settings: root.settings
+            })
+        }
 
-            FormCard.FormButtonDelegate {
-                id: openclawButton
-                text: i18nc("@action:button", "OpenClaw")
-                description: i18nc("@info:whatsthis", "Configure OpenClaw URL and token")
-                icon.name: "network-server"
-                onClicked: applicationWindow().pageStack.push(openclawPage, {
-                    settings: root.settings
-                })
-            }
+        FormCard.FormDelegateSeparator { above: generalButton; below: openclawButton }
 
-            FormCard.FormDelegateSeparator { above: openclawButton; below: openaiCompatibleButton }
+        FormCard.FormButtonDelegate {
+            id: openclawButton
+            text: i18nc("@action:button", "OpenClaw")
+            description: i18nc("@info:whatsthis", "Configure OpenClaw URL and token")
+            icon.name: "network-server"
+            onClicked: applicationWindow().pageStack.push(openclawPage, {
+                settings: root.settings
+            })
+        }
 
-            FormCard.FormButtonDelegate {
-                id: openaiCompatibleButton
-                text: i18nc("@action:button", "OpenAI Compatible")
-                description: i18nc("@info:whatsthis", "Configure OpenAI-compatible API settings")
-                icon.name: "network-connect"
-                onClicked: applicationWindow().pageStack.push(openaiCompatiblePage, {
-                    settings: root.settings
-                })
-            }
+        FormCard.FormDelegateSeparator { above: openclawButton; below: openaiCompatibleButton }
+
+        FormCard.FormButtonDelegate {
+            id: openaiCompatibleButton
+            text: i18nc("@action:button", "OpenAI Compatible")
+            description: i18nc("@info:whatsthis", "Configure OpenAI-compatible API settings")
+            icon.name: "network-connect"
+            onClicked: applicationWindow().pageStack.push(openaiCompatiblePage, {
+                settings: root.settings
+            })
         }
     }
 }
