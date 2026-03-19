@@ -41,8 +41,10 @@ Kirigami.ScrollablePage {
 
     ColumnLayout {
         spacing: 0
+        anchors.fill: parent
 
         FormCard.FormCard {
+            Layout.alignment: Qt.AlignVCenter
             Layout.fillWidth: true
 
             FormCard.FormButtonDelegate {
