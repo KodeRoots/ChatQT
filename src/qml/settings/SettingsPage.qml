@@ -41,7 +41,9 @@ Kirigami.ScrollablePage {
 
     ColumnLayout {
         spacing: 0
-        anchors.fill: parent
+        anchors.fill: applicationWindow().pageStack.wideMode ? undefined : parent
+        Layout.fillWidth: true
+        Layout.alignment: Qt.AlignVCenter
 
         FormCard.FormCard {
             Layout.alignment: Qt.AlignVCenter
