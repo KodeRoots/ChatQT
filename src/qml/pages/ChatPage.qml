@@ -163,7 +163,13 @@ Kirigami.Page {
         applicationWindow().pageStack.pushDialogLayer(Qt.resolvedUrl("../settings/SettingsPage.qml"), {
             settings: appSettings
         }, {
-            title: i18n("Settings")
+            title: i18n("Settings"),
+            width: 600,
+            height: 550,
+            minimumWidth: 600,
+            minimumHeight: 550,
+            maximumWidth: 600,
+            maximumHeight: 550
         });
     }
 
