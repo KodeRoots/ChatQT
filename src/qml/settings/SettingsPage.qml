@@ -39,6 +39,11 @@ Kirigami.ScrollablePage {
         SettingsOpenAICompatible {}
     }
 
+    Component {
+        id: opencodePage
+        SettingsOpenCode {}
+    }
+
     FormCard.FormCard {
         id: formCard
         width: parent.width
@@ -92,6 +97,18 @@ Kirigami.ScrollablePage {
             description: i18nc("@info:whatsthis", "Configure OpenAI-compatible API settings")
             icon.name: "network-connect"
             onClicked: applicationWindow().pageStack.push(openaiCompatiblePage, {
+                settings: root.settings
+            })
+        }
+
+        FormCard.FormDelegateSeparator { above: openaiCompatibleButton; below: opencodeButton }
+
+        FormCard.FormButtonDelegate {
+            id: opencodeButton
+            text: i18nc("@action:button", "OpenCode")
+            description: i18nc("@info:whatsthis", "Configure OpenCode settings")
+            icon.name: "network-server"
+            onClicked: applicationWindow().pageStack.push(opencodePage, {
                 settings: root.settings
             })
         }

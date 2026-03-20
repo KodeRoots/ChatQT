@@ -6,6 +6,12 @@
         <file>qml/components/MessageInput.qml</file>
         <file>qml/components/Header.qml</file>
         <file>qml/logic/ApiClient.js</file>
+        <file>qml/logic/AppSettings.qml</file>
+        <file>qml/logic/OpenCodeClient.js</file>
         <file>qml/settings/SettingsPage.qml</file>
+        <file>qml/settings/SettingsGeneral.qml</file>
+        <file>qml/settings/SettingsOpenClaw.qml</file>
+        <file>qml/settings/SettingsOpenAICompatible.qml</file>
+        <file>qml/settings/SettingsOpenCode.qml</file>
     </qresources>
 </RCC>

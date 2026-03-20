@@ -16,15 +16,21 @@ QtObject {
     property string openaiCompatibleToken: _settings.value("openaiCompatibleToken", "")
     property string openaiCompatibleModel: _settings.value("openaiCompatibleModel", "")
     property bool openaiCompatibleDisableThinking: _settings.value("openaiCompatibleDisableThinking", false)
+    property string opencodeUrl: _settings.value("opencodeUrl", "http://127.0.0.1:3000")
+    property string opencodeUsername: _settings.value("opencodeUsername", "")
+    property string opencodePassword: _settings.value("opencodePassword", "")
+    property string opencodeModel: _settings.value("opencodeModel", "")
 
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
     readonly property bool isOpenAICompatible: provider === "openai-compatible"
+    readonly property bool isOpenCode: provider === "opencode"
 
     function getProviderDisplayName() {
         if (provider === "ollama") return "Ollama"
         if (provider === "openclaw") return "OpenClaw"
         if (provider === "openai-compatible") return openaiCompatibleModel || "OpenAI"
+        if (provider === "opencode") return "OpenCode"
         return "ChatQT"
     }
 
@@ -36,6 +42,10 @@ QtObject {
         _settings.setValue("openaiCompatibleToken", openaiCompatibleToken)
         _settings.setValue("openaiCompatibleModel", openaiCompatibleModel)
         _settings.setValue("openaiCompatibleDisableThinking", openaiCompatibleDisableThinking)
+        _settings.setValue("opencodeUrl", opencodeUrl)
+        _settings.setValue("opencodeUsername", opencodeUsername)
+        _settings.setValue("opencodePassword", opencodePassword)
+        _settings.setValue("opencodeModel", opencodeModel)
         _settings.sync()
     }
 
@@ -50,4 +60,8 @@ QtObject {
     onOpenaiCompatibleTokenChanged: save()
     onOpenaiCompatibleModelChanged: save()
     onOpenaiCompatibleDisableThinkingChanged: save()
+    onOpencodeUrlChanged: save()
+    onOpencodeUsernameChanged: save()
+    onOpencodePasswordChanged: save()
+    onOpencodeModelChanged: save()
 }

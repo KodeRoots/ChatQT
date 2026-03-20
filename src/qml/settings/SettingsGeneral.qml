@@ -29,7 +29,8 @@ Kirigami.ScrollablePage {
             model: [
                 { text: i18n("Ollama"), value: "ollama" },
                 { text: i18n("OpenClaw"), value: "openclaw" },
-                { text: i18n("OpenAI Compatible"), value: "openai-compatible" }
+                { text: i18n("OpenAI Compatible"), value: "openai-compatible" },
+                { text: i18n("OpenCode"), value: "opencode" }
             ]
 
             textRole: "text"

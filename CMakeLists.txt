@@ -56,8 +56,10 @@ qt_add_qml_module(chatqt
         src/qml/settings/SettingsGeneral.qml
         src/qml/settings/SettingsOpenClaw.qml
         src/qml/settings/SettingsOpenAICompatible.qml
+        src/qml/settings/SettingsOpenCode.qml
         src/qml/logic/AppSettings.qml
         src/qml/logic/ApiClient.js
+        src/qml/logic/OpenCodeClient.js
 )
 
 target_link_libraries(chatqt PRIVATE

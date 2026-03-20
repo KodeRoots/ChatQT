@@ -11,6 +11,7 @@ import org.kde.kirigami as Kirigami
 import "../components"
 import "../logic"
 import "../logic/ApiClient.js" as ApiClient
+import "../logic/OpenCodeClient.js" as OpenCodeClient
 
 Kirigami.Page {
     id: root
@@ -47,6 +48,11 @@ Kirigami.Page {
             return appSettings.openaiCompatibleUrl &&
                    appSettings.openaiCompatibleToken &&
                    appSettings.openaiCompatibleModel;
+        } else if (provider === "opencode") {
+            return appSettings.opencodeUrl &&
+                   appSettings.opencodeUsername &&
+                   appSettings.opencodePassword &&
+                   appSettings.opencodeModel;
         }
         return false;
     }
@@ -58,6 +64,8 @@ Kirigami.Page {
             return i18n("OpenClaw not configured.\nPlease set URL and Token in settings.");
         } else if (currentProvider === "openai-compatible") {
             return i18n("OpenAI Compatible not configured.\nPlease set URL, Token and Model in settings.");
+        } else if (currentProvider === "opencode") {
+            return i18n("OpenCode not configured.\nPlease set URL, Username, Password and Model in settings.");
         }
         return i18n("Provider not configured.");
     }
@@ -133,6 +141,17 @@ Kirigami.Page {
                 handleStreaming,
                 handleRequestComplete
             );
+        } else if (currentProvider === "opencode") {
+            OpenCodeClient.requestOpenCode(
+                appSettings.opencodeUrl,
+                appSettings.opencodeUsername,
+                appSettings.opencodePassword,
+                appSettings.opencodeModel,
+                promptArray,
+                listModel,
+                handleStreaming,
+                handleRequestComplete
+            );
         }
     }
 
@@ -157,6 +176,7 @@ Kirigami.Page {
     function clearChat() {
         listModelController.clear();
         promptArray = [];
+        OpenCodeClient.resetSession();
     }
 
     function openSettings() {
