@@ -229,6 +229,53 @@ Kirigami.Page {
             Layout.fillWidth: true
         }
 
+        // Ollama model selector dropdown
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            Layout.rightMargin: Kirigami.Units.largeSpacing
+            Layout.topMargin: Kirigami.Units.smallSpacing
+
+            visible: currentProvider === "ollama" && hasLocalModel
+
+            Controls.ComboBox {
+                id: modelComboBox
+
+                Layout.fillWidth: true
+
+                model: modelsArray
+                textRole: "text"
+                valueRole: "value"
+
+                currentIndex: {
+                    if (!currentModel || modelsArray.length === 0) return -1
+                    for (let i = 0; i < modelsArray.length; i++) {
+                        if (modelsArray[i].value === currentModel) return i
+                    }
+                    return 0
+                }
+
+                onCurrentValueChanged: {
+                    if (currentValue && currentValue !== currentModel) {
+                        currentModel = currentValue
+                    }
+                }
+
+                enabled: !isLoading
+            }
+
+            Controls.Button {
+                icon.name: "view-refresh"
+                display: Controls.AbstractButton.IconOnly
+
+                Controls.ToolTip.text: i18n("Refresh model list")
+                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                Controls.ToolTip.visible: hovered
+
+                onClicked: getModels()
+            }
+        }
+
         MessageInput {
             id: messageInput
 
