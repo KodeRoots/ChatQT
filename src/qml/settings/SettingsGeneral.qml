@@ -21,36 +21,61 @@ Kirigami.ScrollablePage {
     Kirigami.FormLayout {
         anchors.fill: parent
 
-        QQC2.ComboBox {
-            id: providerComboBox
+        Kirigami.Separator {
+            Kirigami.FormData.label: i18nc("@title:group", "Enabled Providers:")
+            Kirigami.FormData.isSection: true
+        }
 
-            Kirigami.FormData.label: i18nc("@title:group", "Provider:")
-
-            model: [
-                { text: i18n("Ollama"), value: "ollama" },
-                { text: i18n("OpenClaw"), value: "openclaw" },
-                { text: i18n("OpenAI Compatible"), value: "openai-compatible" },
-                { text: i18n("OpenCode"), value: "opencode" }
-            ]
-
-            textRole: "text"
-            valueRole: "value"
-
-            onCurrentValueChanged: {
+        QQC2.CheckBox {
+            id: ollamaCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Ollama:")
+            text: i18nc("@option:check", "Enable Ollama provider")
+            checked: root.settings ? root.settings.ollamaEnabled : true
+            onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.provider = currentValue
+                    root.settings.ollamaEnabled = checked
                 }
             }
+        }
 
-            Component.onCompleted: {
+        QQC2.CheckBox {
+            id: openclawCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "OpenClaw:")
+            text: i18nc("@option:check", "Enable OpenClaw provider")
+            checked: root.settings ? root.settings.openclawEnabled : true
+            onCheckedChanged: {
                 if (root.settings) {
-                    currentIndex = indexOfValue(root.settings.provider || "ollama")
+                    root.settings.openclawEnabled = checked
+                }
+            }
+        }
+
+        QQC2.CheckBox {
+            id: openaiCompatibleCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "OpenAI Compatible:")
+            text: i18nc("@option:check", "Enable OpenAI Compatible provider")
+            checked: root.settings ? root.settings.openaiCompatibleEnabled : true
+            onCheckedChanged: {
+                if (root.settings) {
+                    root.settings.openaiCompatibleEnabled = checked
+                }
+            }
+        }
+
+        QQC2.CheckBox {
+            id: opencodeCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "OpenCode:")
+            text: i18nc("@option:check", "Enable OpenCode provider")
+            checked: root.settings ? root.settings.opencodeEnabled : true
+            onCheckedChanged: {
+                if (root.settings) {
+                    root.settings.opencodeEnabled = checked
                 }
             }
         }
 
         QQC2.Label {
-            text: i18nc("@info", "Select the AI provider to use for chat.")
+            text: i18nc("@info", "Disabled providers will not appear in the provider dropdown.")
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.WordWrap

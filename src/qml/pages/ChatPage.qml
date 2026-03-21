@@ -32,21 +32,25 @@ Kirigami.Page {
                 Layout.fillWidth: true
 
                 flat: true
-                model: root.providerOptions
+                model: root.enabledProviderOptions
                 textRole: "text"
                 valueRole: "value"
 
                 currentIndex: {
-                    for (let i = 0; i < root.providerOptions.length; i++) {
-                        if (root.providerOptions[i].value === appSettings.provider) {
+                    for (let i = 0; i < root.enabledProviderOptions.length; i++) {
+                        if (root.enabledProviderOptions[i].value === appSettings.provider) {
                             return i;
                         }
+                    }
+                    // If current provider is disabled, switch to first enabled
+                    if (root.enabledProviderOptions.length > 0) {
+                        root.switchProvider(root.enabledProviderOptions[0].value)
                     }
                     return 0;
                 }
 
                 onActivated: function(index) {
-                    root.switchProvider(root.providerOptions[index].value);
+                    root.switchProvider(root.enabledProviderOptions[index].value);
                 }
 
                 enabled: !root.isLoading
@@ -73,6 +77,17 @@ Kirigami.Page {
         { text: "OpenAI Compatible", value: "openai-compatible" },
         { text: "OpenCode", value: "opencode" }
     ]
+
+    property var enabledProviderOptions: providerOptions.filter(function(opt) {
+        if (!appSettings) return true
+        switch (opt.value) {
+            case "ollama": return appSettings.ollamaEnabled
+            case "openclaw": return appSettings.openclawEnabled
+            case "openai-compatible": return appSettings.openaiCompatibleEnabled
+            case "opencode": return appSettings.opencodeEnabled
+            default: return true
+        }
+    })
 
     padding: 0
 

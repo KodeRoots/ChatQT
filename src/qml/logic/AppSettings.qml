@@ -21,6 +21,12 @@ QtObject {
     property string opencodePassword: _settings.value("opencodePassword", "")
     property string opencodeModel: _settings.value("opencodeModel", "")
 
+    // Provider enable/disable settings
+    property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
+    property bool openclawEnabled: _settings.value("openclawEnabled", true)
+    property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
+    property bool opencodeEnabled: _settings.value("opencodeEnabled", true)
+
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
     readonly property bool isOpenAICompatible: provider === "openai-compatible"
@@ -46,6 +52,10 @@ QtObject {
         _settings.setValue("opencodeUsername", opencodeUsername)
         _settings.setValue("opencodePassword", opencodePassword)
         _settings.setValue("opencodeModel", opencodeModel)
+        _settings.setValue("ollamaEnabled", ollamaEnabled)
+        _settings.setValue("openclawEnabled", openclawEnabled)
+        _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
+        _settings.setValue("opencodeEnabled", opencodeEnabled)
         _settings.sync()
     }
 
@@ -64,4 +74,8 @@ QtObject {
     onOpencodeUsernameChanged: save()
     onOpencodePasswordChanged: save()
     onOpencodeModelChanged: save()
+    onOllamaEnabledChanged: save()
+    onOpenclawEnabledChanged: save()
+    onOpenaiCompatibleEnabledChanged: save()
+    onOpencodeEnabledChanged: save()
 }
