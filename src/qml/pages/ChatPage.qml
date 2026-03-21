@@ -17,39 +17,34 @@ Kirigami.Page {
     id: root
 
     titleDelegate: Component {
-        RowLayout {
-            spacing: Kirigami.Units.smallSpacing
+        Controls.ComboBox {
+            id: providerComboBox
 
-            Controls.ComboBox {
-                id: providerComboBox
+            Layout.fillWidth: true
 
-                Layout.fillWidth: true
-                Layout.maximumWidth: Kirigami.Units.gridUnit * 15
+            flat: true
+            model: root.providerOptions
+            textRole: "text"
+            valueRole: "value"
 
-                flat: true
-                model: root.providerOptions
-                textRole: "text"
-                valueRole: "value"
-
-                currentIndex: {
-                    for (let i = 0; i < root.providerOptions.length; i++) {
-                        if (root.providerOptions[i].value === appSettings.provider) {
-                            return i;
-                        }
+            currentIndex: {
+                for (let i = 0; i < root.providerOptions.length; i++) {
+                    if (root.providerOptions[i].value === appSettings.provider) {
+                        return i;
                     }
-                    return 0;
                 }
-
-                onActivated: function(index) {
-                    root.switchProvider(root.providerOptions[index].value);
-                }
-
-                enabled: !root.isLoading
-
-                Controls.ToolTip.text: i18n("Select AI provider")
-                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                Controls.ToolTip.visible: hovered
+                return 0;
             }
+
+            onActivated: function(index) {
+                root.switchProvider(root.providerOptions[index].value);
+            }
+
+            enabled: !root.isLoading
+
+            Controls.ToolTip.text: i18n("Select AI provider")
+            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+            Controls.ToolTip.visible: hovered
         }
     }
 
