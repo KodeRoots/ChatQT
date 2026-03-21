@@ -60,14 +60,6 @@ Kirigami.Page {
                 Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                 Controls.ToolTip.visible: hovered
             }
-
-            // OpenCode server status indicator
-            ServerStatusIndicator {
-                visible: currentProvider === "opencode"
-                compact: true
-                showText: false
-                onClicked: root.openSettings()
-            }
         }
     }
 
@@ -301,6 +293,14 @@ Kirigami.Page {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        // OpenCode server status warning
+        Kirigami.InlineMessage {
+            Layout.fillWidth: true
+            visible: currentProvider === "opencode" && !ProcessManager.running
+            type: Kirigami.MessageType.Warning
+            text: ProcessManager.lastError || i18n("OpenCode server is not running. Start it in Settings.")
+        }
 
         ListView {
             id: listView

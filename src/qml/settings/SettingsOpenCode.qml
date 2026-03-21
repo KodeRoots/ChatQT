@@ -19,8 +19,6 @@ Kirigami.ScrollablePage {
     property var settings: null
     Kirigami.ColumnView.fillWidth: true
 
-    ServerLogsViewer { id: logsViewer }
-
     Kirigami.FormLayout {
         Layout.fillWidth: true
 
@@ -36,8 +34,16 @@ Kirigami.ScrollablePage {
             ServerStatusIndicator {
                 showText: true
                 compact: false
-                onClicked: logsViewer.open()
             }
+        }
+
+        QQC2.Label {
+            visible: ProcessManager.lastError !== ""
+            Kirigami.FormData.label: i18nc("@label", "Error:")
+            text: ProcessManager.lastError
+            color: Kirigami.Theme.negativeTextColor
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
         }
 
         RowLayout {
@@ -302,32 +308,6 @@ Kirigami.ScrollablePage {
             text: i18nc("@info", "The model name to use for chat")
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-        }
-
-        // ==================== Troubleshooting Section ====================
-        Kirigami.Separator {
-            Kirigami.FormData.isSection: true
-            Kirigami.FormData.label: i18nc("@title:group", "Troubleshooting")
-        }
-
-        RowLayout {
-            Kirigami.FormData.label: i18nc("@label", "Logs:")
-
-            QQC2.Button {
-                text: i18n("View Logs")
-                icon.name: "text-plain"
-                onClicked: logsViewer.open()
-            }
-        }
-
-        QQC2.Label {
-            visible: ProcessManager.lastError !== ""
-            Kirigami.FormData.label: i18nc("@label", "Last Error:")
-
-            text: ProcessManager.lastError
-            color: Kirigami.Theme.negativeTextColor
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
         }
