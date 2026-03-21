@@ -17,34 +17,44 @@ Kirigami.Page {
     id: root
 
     titleDelegate: Component {
-        Controls.ComboBox {
-            id: providerComboBox
+        RowLayout {
+            spacing: Kirigami.Units.smallSpacing
 
-            Layout.fillWidth: true
+            Controls.Label {
+                text: i18n("Provider:")
+                color: Kirigami.Theme.textColor
+                Layout.alignment: Qt.AlignVCenter
+            }
 
-            flat: true
-            model: root.providerOptions
-            textRole: "text"
-            valueRole: "value"
+            Controls.ComboBox {
+                id: providerComboBox
 
-            currentIndex: {
-                for (let i = 0; i < root.providerOptions.length; i++) {
-                    if (root.providerOptions[i].value === appSettings.provider) {
-                        return i;
+                Layout.fillWidth: true
+
+                flat: true
+                model: root.providerOptions
+                textRole: "text"
+                valueRole: "value"
+
+                currentIndex: {
+                    for (let i = 0; i < root.providerOptions.length; i++) {
+                        if (root.providerOptions[i].value === appSettings.provider) {
+                            return i;
+                        }
                     }
+                    return 0;
                 }
-                return 0;
+
+                onActivated: function(index) {
+                    root.switchProvider(root.providerOptions[index].value);
+                }
+
+                enabled: !root.isLoading
+
+                Controls.ToolTip.text: i18n("Select AI provider")
+                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                Controls.ToolTip.visible: hovered
             }
-
-            onActivated: function(index) {
-                root.switchProvider(root.providerOptions[index].value);
-            }
-
-            enabled: !root.isLoading
-
-            Controls.ToolTip.text: i18n("Select AI provider")
-            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-            Controls.ToolTip.visible: hovered
         }
     }
 
