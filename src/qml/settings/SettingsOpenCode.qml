@@ -6,110 +6,274 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
+import QtQuick.Dialogs
 
 import org.kde.kirigami as Kirigami
+import org.kde.chatqt
+
+import "../components"
 
 Kirigami.ScrollablePage {
     id: root
-
     title: i18nc("@title", "OpenCode")
-
     property var settings: null
-
     Kirigami.ColumnView.fillWidth: true
 
+    ServerLogsViewer { id: logsViewer }
+
     Kirigami.FormLayout {
-        anchors.fill: parent
+        Layout.fillWidth: true
 
-        QQC2.TextField {
-            id: opencodeUrlField
+        // ==================== Server Status Section ====================
+        Kirigami.Separator {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18nc("@title:group", "Server Status")
+        }
 
-            Kirigami.FormData.label: i18nc("@label:textbox", "URL:")
+        RowLayout {
+            Kirigami.FormData.label: i18nc("@label", "Status:")
 
-            Layout.fillWidth: true
+            ServerStatusIndicator {
+                showText: true
+                compact: false
+                onClicked: logsViewer.open()
+            }
+        }
 
-            placeholderText: "http://127.0.0.1:3000"
+        RowLayout {
+            Kirigami.FormData.label: i18nc("@label", "Controls:")
 
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.opencodeUrl = text
+            QQC2.Button {
+                text: i18n("Start")
+                icon.name: "media-playback-start"
+                enabled: !ProcessManager.running 
+                         && ProcessManager.status !== "starting"
+                         && ProcessManager.isBinaryValid()
+                onClicked: ProcessManager.start()
+
+                QQC2.ToolTip.visible: hovered && !ProcessManager.isBinaryValid()
+                QQC2.ToolTip.text: i18n("Set a valid binary path before starting")
+            }
+
+            QQC2.Button {
+                text: i18n("Stop")
+                icon.name: "media-playback-stop"
+                enabled: ProcessManager.running && ProcessManager.status !== "stopping"
+                onClicked: ProcessManager.stop()
+            }
+
+            QQC2.Button {
+                text: i18n("Restart")
+                icon.name: "media-playback-restart"
+                enabled: ProcessManager.running && ProcessManager.status !== "stopping"
+                onClicked: ProcessManager.restart()
+            }
+        }
+
+        // ==================== Server Configuration Section ====================
+        Kirigami.Separator {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18nc("@title:group", "Server Configuration")
+        }
+
+        RowLayout {
+            Kirigami.FormData.label: i18nc("@label:textbox", "Binary Path:")
+
+            QQC2.TextField {
+                id: binaryPathField
+                Layout.fillWidth: true
+                placeholderText: i18nc("@info:placeholder", "Path to OpenCode binary")
+                text: ProcessManager.binaryPath
+
+                onEditingFinished: {
+                    ProcessManager.binaryPath = text
+                }
+
+                Connections {
+                    target: ProcessManager
+                    function onBinaryPathChanged() {
+                        binaryPathField.text = ProcessManager.binaryPath
+                    }
                 }
             }
 
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.opencodeUrl || ""
+            QQC2.Button {
+                icon.name: "folder-open"
+                display: QQC2.AbstractButton.IconOnly
+                QQC2.ToolTip.text: i18n("Browse for OpenCode binary")
+                QQC2.ToolTip.visible: hovered
+                onClicked: fileDialog.open()
+
+                FileDialog {
+                    id: fileDialog
+                    title: i18n("Select OpenCode Binary")
+                    fileMode: FileDialog.OpenFile
+                    nameFilters: ["Executable files (*)"]
+                    onAccepted: {
+                        // selectedFile returns a URL like "file:///path/to/file"
+                        // Convert to local path by removing the "file://" prefix
+                        var path = selectedFile.toString()
+                        if (path.startsWith("file://")) {
+                            path = path.substring(7)
+                        }
+                        ProcessManager.binaryPath = path
+                    }
+                }
+            }
+
+            QQC2.Button {
+                icon.name: "search"
+                display: QQC2.AbstractButton.IconOnly
+                QQC2.ToolTip.text: i18n("Auto-detect OpenCode binary")
+                QQC2.ToolTip.visible: hovered
+                onClicked: {
+                    if (!ProcessManager.autoDetectBinary()) {
+                        applicationWindow().showPassiveNotification(i18n("Could not find OpenCode binary"))
+                    }
                 }
             }
         }
 
         QQC2.Label {
-            text: i18nc("@info", "The URL of your OpenCode instance")
+            text: ProcessManager.isBinaryValid() 
+                ? i18nc("@info", "Binary found and executable") 
+                : i18nc("@info", "Binary not found or not executable")
             font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
+            color: ProcessManager.isBinaryValid() ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.negativeTextColor
+            Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            Layout.fillWidth: true
         }
 
-        QQC2.TextField {
-            id: opencodeUsernameField
-
-            Kirigami.FormData.label: i18nc("@label:textbox", "Username:")
-
-            Layout.fillWidth: true
-
-            placeholderText: i18nc("@info:placeholder", "Enter your username")
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.opencodeUsername = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.opencodeUsername || ""
-                }
-            }
-        }
-
-        QQC2.Label {
-            text: i18nc("@info", "Username for HTTP Basic Authentication")
-            font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-        }
-
-        QQC2.TextField {
-            id: opencodePasswordField
-
+        RowLayout {
             Kirigami.FormData.label: i18nc("@label:textbox", "Password:")
 
-            Layout.fillWidth: true
+            QQC2.TextField {
+                id: passwordField
+                Layout.fillWidth: true
+                placeholderText: i18nc("@info:placeholder", "Server password")
+                text: ProcessManager.password
+                echoMode: QQC2.TextField.Password
 
-            placeholderText: i18nc("@info:placeholder", "Enter your password")
-            echoMode: QQC2.TextField.Password
+                onEditingFinished: {
+                    ProcessManager.password = text
+                }
 
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.opencodePassword = text
+                Connections {
+                    target: ProcessManager
+                    function onPasswordChanged() {
+                        passwordField.text = ProcessManager.password
+                    }
                 }
             }
 
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.opencodePassword || ""
+            QQC2.Button {
+                icon.name: "visibility"
+                display: QQC2.AbstractButton.IconOnly
+                checkable: true
+                QQC2.ToolTip.text: i18n("Toggle password visibility")
+                QQC2.ToolTip.visible: hovered
+                onCheckedChanged: {
+                    passwordField.echoMode = checked ? QQC2.TextField.Normal : QQC2.TextField.Password
                 }
+            }
+
+            QQC2.Button {
+                icon.name: "roll"
+                display: QQC2.AbstractButton.IconOnly
+                QQC2.ToolTip.text: i18n("Generate new password")
+                QQC2.ToolTip.visible: hovered
+                onClicked: ProcessManager.regeneratePassword()
             }
         }
 
         QQC2.Label {
-            text: i18nc("@info", "Password for HTTP Basic Authentication")
+            text: i18nc("@info", "Password is set via OPENCODE_SERVER_PASSWORD environment variable")
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
+        }
+
+        QQC2.CheckBox {
+            id: autoStartCheck
+
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Auto-start:")
+
+            checked: ProcessManager.autoStart
+            text: i18nc("@info:checkbox", "Start server when app opens")
+
+            onCheckedChanged: {
+                ProcessManager.autoStart = checked
+            }
+
+            Connections {
+                target: ProcessManager
+                function onAutoStartChanged() {
+                    autoStartCheck.checked = ProcessManager.autoStart
+                }
+            }
+        }
+
+        QQC2.CheckBox {
+            id: autoRestartCheck
+
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Auto-restart:")
+
+            checked: ProcessManager.autoRestart
+            text: i18nc("@info:checkbox", "Restart server on crash (max 3 attempts)")
+
+            onCheckedChanged: {
+                ProcessManager.autoRestart = checked
+            }
+
+            Connections {
+                target: ProcessManager
+                function onAutoRestartChanged() {
+                    autoRestartCheck.checked = ProcessManager.autoRestart
+                }
+            }
+        }
+
+        RowLayout {
+            Kirigami.FormData.label: i18nc("@label", "Restart attempts:")
+
+            QQC2.Label {
+                text: ProcessManager.restartAttempts + " / 3"
+                color: ProcessManager.restartAttempts > 0 ? Kirigami.Theme.neutralTextColor : Kirigami.Theme.textColor
+            }
+
+            QQC2.Button {
+                icon.name: "edit-reset"
+                display: QQC2.AbstractButton.IconOnly
+                visible: ProcessManager.restartAttempts > 0
+                QQC2.ToolTip.text: i18n("Reset restart counter")
+                QQC2.ToolTip.visible: hovered
+                onClicked: ProcessManager.restart()
+            }
+        }
+
+        // ==================== Connection Settings Section ====================
+        Kirigami.Separator {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18nc("@title:group", "Connection Settings")
+        }
+
+        QQC2.Label {
+            Kirigami.FormData.label: i18nc("@label", "Host:")
+            text: "127.0.0.1"
+            color: Kirigami.Theme.disabledTextColor
+        }
+
+        QQC2.Label {
+            Kirigami.FormData.label: i18nc("@label", "Port:")
+            text: "4096"
+            color: Kirigami.Theme.disabledTextColor
+        }
+
+        QQC2.Label {
+            Kirigami.FormData.label: i18nc("@label", "URL:")
+            text: "http://127.0.0.1:4096"
+            color: Kirigami.Theme.disabledTextColor
         }
 
         QQC2.TextField {
@@ -135,9 +299,35 @@ Kirigami.ScrollablePage {
         }
 
         QQC2.Label {
-            text: i18nc("@info", "The model name to use")
+            text: i18nc("@info", "The model name to use for chat")
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+        }
+
+        // ==================== Troubleshooting Section ====================
+        Kirigami.Separator {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18nc("@title:group", "Troubleshooting")
+        }
+
+        RowLayout {
+            Kirigami.FormData.label: i18nc("@label", "Logs:")
+
+            QQC2.Button {
+                text: i18n("View Logs")
+                icon.name: "text-plain"
+                onClicked: logsViewer.open()
+            }
+        }
+
+        QQC2.Label {
+            visible: ProcessManager.lastError !== ""
+            Kirigami.FormData.label: i18nc("@label", "Last Error:")
+
+            text: ProcessManager.lastError
+            color: Kirigami.Theme.negativeTextColor
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
         }

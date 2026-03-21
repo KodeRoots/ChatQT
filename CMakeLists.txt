@@ -42,7 +42,10 @@ ecm_setup_version(${PROJECT_VERSION}
     VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/chatqt_version.h"
 )
 
-qt_add_executable(chatqt src/main.cpp)
+qt_add_executable(chatqt 
+    src/main.cpp
+    src/processmanager.cpp
+)
 
 qt_add_qml_module(chatqt
     URI io.github.denysmb.chatqt
@@ -52,6 +55,8 @@ qt_add_qml_module(chatqt
         src/qml/pages/ChatPage.qml
         src/qml/components/ChatMessage.qml
         src/qml/components/MessageInput.qml
+        src/qml/components/ServerStatusIndicator.qml
+        src/qml/components/ServerLogsViewer.qml
         src/qml/settings/SettingsPage.qml
         src/qml/settings/SettingsGeneral.qml
         src/qml/settings/SettingsOpenClaw.qml
@@ -74,6 +79,8 @@ target_link_libraries(chatqt PRIVATE
     KF6::ConfigGui
     KF6::Crash
 )
+
+target_include_directories(chatqt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 install(TARGETS chatqt ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
 install(FILES resources/icons/io.github.denysmb.chatqt.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)

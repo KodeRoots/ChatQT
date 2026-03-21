@@ -10,6 +10,7 @@
 #include <QQuickStyle>
 #include <QIcon>
 #include <QUrl>
+#include <QQmlEngine>
 
 #include <KAboutData>
 #include <KLocalizedContext>
@@ -17,6 +18,7 @@
 #include <KCrash>
 
 #include "chatqt_version.h"
+#include "processmanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -44,6 +46,9 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+
+    // Register ProcessManager as singleton
+    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
 
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, [](const QList<QQmlError> &warnings) {
         for (const QQmlError &warning : warnings) {

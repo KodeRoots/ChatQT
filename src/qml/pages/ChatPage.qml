@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.chatqt
 
 import "../components"
 import "../logic"
@@ -58,6 +59,14 @@ Kirigami.Page {
                 Controls.ToolTip.text: i18n("Select AI provider")
                 Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                 Controls.ToolTip.visible: hovered
+            }
+
+            // OpenCode server status indicator
+            ServerStatusIndicator {
+                visible: currentProvider === "opencode"
+                compact: true
+                showText: false
+                onClicked: root.openSettings()
             }
         }
     }
