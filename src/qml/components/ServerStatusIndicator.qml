@@ -38,7 +38,7 @@ Item {
         if (status === "starting" || status === "stopping") {
             return Kirigami.Theme.neutralTextColor
         }
-        if (status === "crashed") {
+        if (status === "crashed" || ProcessManager.lastError !== "") {
             return Kirigami.Theme.negativeTextColor
         }
         return Kirigami.Theme.disabledTextColor
@@ -56,7 +56,7 @@ Item {
         if (status === "stopping") {
             return "media-playback-stop"
         }
-        if (status === "crashed") {
+        if (status === "crashed" || ProcessManager.lastError !== "") {
             return "dialog-error"
         }
         return "dialog-cancel"
@@ -65,6 +65,10 @@ Item {
     function getStatusText() {
         if (ProcessManager.running) {
             return i18n("Running")
+        }
+        
+        if (ProcessManager.lastError !== "") {
+            return i18n("Error - %1", ProcessManager.lastError)
         }
         
         const status = ProcessManager.status

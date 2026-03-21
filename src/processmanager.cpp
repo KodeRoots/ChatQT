@@ -271,6 +271,15 @@ bool ProcessManager::isBinaryValid() const
     return info.exists() && info.isExecutable();
 }
 
+bool ProcessManager::validateBinaryPath(const QString &path) const
+{
+    if (path.isEmpty()) {
+        return false;
+    }
+    QFileInfo info(path);
+    return info.exists() && info.isExecutable();
+}
+
 void ProcessManager::onProcessStarted()
 {
     setRunning(true);

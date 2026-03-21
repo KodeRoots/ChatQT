@@ -37,15 +37,6 @@ Kirigami.ScrollablePage {
             }
         }
 
-        QQC2.Label {
-            visible: ProcessManager.lastError !== ""
-            Kirigami.FormData.label: i18nc("@label", "Error:")
-            text: ProcessManager.lastError
-            color: Kirigami.Theme.negativeTextColor
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-        }
-
         RowLayout {
             Kirigami.FormData.label: i18nc("@label", "Controls:")
 
@@ -54,10 +45,13 @@ Kirigami.ScrollablePage {
                 icon.name: "media-playback-start"
                 enabled: !ProcessManager.running 
                          && ProcessManager.status !== "starting"
-                         && ProcessManager.isBinaryValid()
-                onClicked: ProcessManager.start()
+                         && ProcessManager.validateBinaryPath(binaryPathField.text)
+                onClicked: {
+                    ProcessManager.binaryPath = binaryPathField.text
+                    ProcessManager.start()
+                }
 
-                QQC2.ToolTip.visible: hovered && !ProcessManager.isBinaryValid()
+                QQC2.ToolTip.visible: hovered && !ProcessManager.validateBinaryPath(binaryPathField.text)
                 QQC2.ToolTip.text: i18n("Set a valid binary path before starting")
             }
 
@@ -141,11 +135,11 @@ Kirigami.ScrollablePage {
         }
 
         QQC2.Label {
-            text: ProcessManager.isBinaryValid() 
+            text: ProcessManager.validateBinaryPath(binaryPathField.text) 
                 ? i18nc("@info", "Binary found and executable") 
                 : i18nc("@info", "Binary not found or not executable")
             font: Kirigami.Theme.smallFont
-            color: ProcessManager.isBinaryValid() ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.negativeTextColor
+            color: ProcessManager.validateBinaryPath(binaryPathField.text) ? Kirigami.Theme.positiveTextColor : Kirigami.Theme.negativeTextColor
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
         }

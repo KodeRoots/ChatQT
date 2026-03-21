@@ -51,6 +51,7 @@ public:
     Q_INVOKABLE QStringList recentLogs(int count = 50) const;
     Q_INVOKABLE void regeneratePassword();
     Q_INVOKABLE bool isBinaryValid() const;
+    Q_INVOKABLE bool validateBinaryPath(const QString &path) const;
 
 Q_SIGNALS:
     void runningChanged(bool running);
