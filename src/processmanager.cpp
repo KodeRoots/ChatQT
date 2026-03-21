@@ -51,6 +51,11 @@ ProcessManager::ProcessManager(QObject *parent)
     }
 
     setStatus(QStringLiteral("stopped"));
+
+    // Auto-start server if enabled
+    if (m_autoStart && isBinaryValid()) {
+        QTimer::singleShot(500, this, &ProcessManager::start);
+    }
 }
 
 ProcessManager::~ProcessManager()
