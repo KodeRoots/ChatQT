@@ -16,7 +16,42 @@ import "../logic/OpenCodeClient.js" as OpenCodeClient
 Kirigami.Page {
     id: root
 
-    title: appSettings.getProviderDisplayName()
+    titleDelegate: Component {
+        RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.ComboBox {
+                id: providerComboBox
+
+                Layout.fillWidth: true
+                Layout.maximumWidth: Kirigami.Units.gridUnit * 15
+
+                flat: true
+                model: root.providerOptions
+                textRole: "text"
+                valueRole: "value"
+
+                currentIndex: {
+                    for (let i = 0; i < root.providerOptions.length; i++) {
+                        if (root.providerOptions[i].value === appSettings.provider) {
+                            return i;
+                        }
+                    }
+                    return 0;
+                }
+
+                onActivated: function(index) {
+                    root.switchProvider(root.providerOptions[index].value);
+                }
+
+                enabled: !root.isLoading
+
+                Controls.ToolTip.text: i18n("Select AI provider")
+                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                Controls.ToolTip.visible: hovered
+            }
+        }
+    }
 
     property string currentModel: ''
     property var listModelController: null
@@ -27,6 +62,12 @@ Kirigami.Page {
     property bool disableAutoScroll: false
     property string currentProvider: appSettings.provider
     property bool thinkingEnabled: !appSettings.openaiCompatibleDisableThinking
+    property var providerOptions: [
+        { text: "Ollama", value: "ollama" },
+        { text: "OpenClaw", value: "openclaw" },
+        { text: "OpenAI Compatible", value: "openai-compatible" },
+        { text: "OpenCode", value: "opencode" }
+    ]
 
     padding: 0
 
@@ -36,6 +77,27 @@ Kirigami.Page {
 
     function getProviderDisplayName() {
         return appSettings.getProviderDisplayName()
+    }
+
+    function switchProvider(newProvider) {
+        if (newProvider === appSettings.provider) return;
+
+        // Clear chat when switching providers to avoid context confusion
+        clearChat();
+
+        // Update provider in settings
+        appSettings.provider = newProvider;
+
+        // Update local property
+        currentProvider = newProvider;
+
+        // Load models if switching to Ollama
+        if (newProvider === "ollama") {
+            getModels();
+        }
+
+        // Show notification
+        applicationWindow().showPassiveNotification(i18n("Switched to %1", appSettings.getProviderDisplayName()));
     }
 
     function isProviderConfigured() {
