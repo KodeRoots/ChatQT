@@ -60,6 +60,21 @@ Kirigami.Page {
                 Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
                 Controls.ToolTip.visible: hovered
             }
+
+            Controls.Button {
+                id: settingsButton
+
+                text: i18n("Settings")
+                icon.name: "settings-configure"
+                // display: Controls.AbstractButton.IconOnly
+                flat: true
+
+                // Controls.ToolTip.text: i18n("Settings")
+                // Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                // Controls.ToolTip.visible: hovered
+
+                onClicked: root.openSettings()
+            }
         }
     }
 
@@ -327,14 +342,6 @@ Kirigami.Page {
         }
         messageInput.focusInput();
     }
-
-    actions: [
-        Kirigami.Action {
-            text: i18n("Settings")
-            icon.name: "settings-configure"
-            onTriggered: root.openSettings()
-        }
-    ]
 
     ColumnLayout {
         anchors.fill: parent
