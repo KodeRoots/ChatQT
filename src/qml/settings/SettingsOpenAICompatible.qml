@@ -8,6 +8,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 
 import org.kde.kirigami as Kirigami
+import "../components" as COMPONENTS
 
 Kirigami.ScrollablePage {
     id: root
@@ -16,128 +17,230 @@ Kirigami.ScrollablePage {
 
     property var settings: null
 
-    Kirigami.ColumnView.fillWidth: true
+    ListModel {
+        id: providersModel
+    }
 
-    Kirigami.FormLayout {
+    Component.onCompleted: {
+        if (root.settings) {
+            loadProviders()
+        }
+    }
+
+    function generateUuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0
+            var v = c === 'x' ? r : (r & 0x3 | 0x8)
+            return v.toString(16)
+        })
+    }
+
+    function loadProviders() {
+        providersModel.clear()
+        try {
+            var providers = JSON.parse(root.settings.openaiCompatibleProviders || "[]")
+            console.log("Loaded providers:", providers.length)
+            for (var i = 0; i < providers.length; i++) {
+                console.log("Provider", i, ":", JSON.stringify(providers[i]))
+                if (providers[i].enabled === undefined) {
+                    providers[i].enabled = true
+                }
+                if (!providers[i].id) {
+                    providers[i].id = generateUuid()
+                }
+                providersModel.append(providers[i])
+            }
+        } catch (e) {
+            console.error("Failed to parse providers:", e)
+        }
+    }
+
+    function saveProviders() {
+        var providers = []
+        for (var i = 0; i < providersModel.count; i++) {
+            var item = providersModel.get(i)
+            providers.push({
+                id: item.id,
+                displayName: item.displayName,
+                url: item.url,
+                token: item.token,
+                model: item.model,
+                enabled: item.enabled !== undefined ? item.enabled : true
+            })
+        }
+        root.settings.openaiCompatibleProviders = JSON.stringify(providers)
+        console.log("Saved providers:", root.settings.openaiCompatibleProviders)
+    }
+
+    function addProvider(provider) {
+        if (provider === undefined) {
+            provider = {
+                id: generateUuid(),
+                displayName: i18nc("@info", "New Provider"),
+                url: "",
+                token: "",
+                model: "",
+                enabled: true
+            }
+        }
+        if (provider.enabled === undefined) {
+            provider.enabled = true
+        }
+        if (!provider.id) {
+            provider.id = generateUuid()
+        }
+        providersModel.append(provider)
+        saveProviders()
+    }
+
+    function updateProvider(index, provider) {
+        var existing = providersModel.get(index)
+        if (existing.enabled !== undefined) {
+            provider.enabled = existing.enabled
+        }
+        providersModel.set(index, provider)
+        saveProviders()
+    }
+
+    function removeProvider(index) {
+        providersModel.remove(index)
+        saveProviders()
+    }
+
+    function toggleProviderEnabled(index) {
+        var item = providersModel.get(index)
+        providersModel.setProperty(index, "enabled", !item.enabled)
+        saveProviders()
+    }
+
+    ColumnLayout {
         anchors.fill: parent
-
-        QQC2.TextField {
-            id: openaiCompatibleUrlField
-
-            Kirigami.FormData.label: i18nc("@label:textbox", "API URL:")
-
-            Layout.fillWidth: true
-
-            placeholderText: "https://api.openai.com/v1"
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleUrl = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openaiCompatibleUrl || ""
-                }
-            }
-        }
+        anchors.margins: Kirigami.Units.largeSpacing
+        spacing: Kirigami.Units.largeSpacing
 
         QQC2.Label {
-            text: i18nc("@info", "The base URL of the OpenAI-compatible API")
+            text: i18nc("@info", "Configure multiple OpenAI-compatible API providers (OpenAI, DeepSeek, Groq, etc.). Add, edit, or remove providers using the buttons below.")
             font: Kirigami.Theme.smallFont
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
         }
 
-        QQC2.TextField {
-            id: openaiCompatibleTokenField
-
-            Kirigami.FormData.label: i18nc("@label:textbox", "API Token:")
-
-            Layout.fillWidth: true
-
-            placeholderText: i18nc("@info:placeholder", "Enter your API token")
-            echoMode: QQC2.TextField.Password
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleToken = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openaiCompatibleToken || ""
-                }
-            }
-        }
-
-        QQC2.Label {
-            text: i18nc("@info", "Your API key/token for authentication")
-            font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
+        Kirigami.Heading {
+            visible: providersModel.count > 0
+            level: 2
+            text: i18nc("@title:group", "Providers")
             Layout.fillWidth: true
         }
 
-        QQC2.TextField {
-            id: openaiCompatibleModelField
-
-            Kirigami.FormData.label: i18nc("@label:textbox", "Model:")
-
+        ColumnLayout {
             Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: providersModel.count > 0
+            spacing: Kirigami.Units.smallSpacing
 
-            placeholderText: "gpt-4"
-
-            onTextChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleModel = text
-                }
-            }
-
-            Component.onCompleted: {
-                if (root.settings) {
-                    text = root.settings.openaiCompatibleModel || ""
+            Repeater {
+                model: providersModel
+                delegate: COMPONENTS.ProviderCard {
+                    Layout.fillWidth: true
+                    providerDisplayName: providersModel.get(index).displayName
+                    providerUrl: providersModel.get(index).url
+                    providerToken: providersModel.get(index).token
+                    providerModel: providersModel.get(index).model
+                    providerEnabled: providersModel.get(index).enabled !== undefined ? providersModel.get(index).enabled : true
+                    onEditClicked: editSheet.openProvider(index)
+                    onRemoveClicked: root.removeProvider(index)
+                    onEnabledToggled: root.toggleProviderEnabled(index)
                 }
             }
         }
 
-        QQC2.Label {
-            text: i18nc("@info", "The model name to use (e.g., gpt-4, gpt-3.5-turbo, deepseek-chat)")
-            font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
+        QQC2.Button {
+            id: addButton
+            text: i18nc("@action:button", "Add Provider")
+            icon.name: "list-add-symbolic"
             Layout.fillWidth: true
+            onClicked: editSheet.openNewProvider()
         }
 
-        QQC2.CheckBox {
-            id: thinkingCheckBox
+        Item {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+        }
 
-            Kirigami.FormData.label: i18nc("@label:checkbox", "Thinking Mode:")
+        Kirigami.Dialog {
+            id: editSheet
+            title: i18nc("@title:window", "Edit Provider")
 
-            text: i18nc("@option:check", "Enable thinking/reasoning mode")
+            property int editingIndex: -1
 
-            checked: root.settings ? !root.settings.openaiCompatibleDisableThinking : true
+            function openNewProvider() {
+                editingIndex = -1
+                displayNameField.text = i18nc("@info", "New Provider")
+                urlField.text = ""
+                tokenField.text = ""
+                modelField.text = ""
+                editSheet.title = i18nc("@title:window", "Add Provider")
+                editSheet.open()
+            }
 
-            onCheckedChanged: {
-                if (root.settings) {
-                    root.settings.openaiCompatibleDisableThinking = !checked
+            function openProvider(index) {
+                editingIndex = index
+                var provider = providersModel.get(index)
+                displayNameField.text = provider.displayName
+                urlField.text = provider.url
+                tokenField.text = provider.token
+                modelField.text = provider.model
+                editSheet.title = i18nc("@title:window", "Edit Provider")
+                editSheet.open()
+            }
+
+            standardButtons: Kirigami.Dialog.Ok | Kirigami.Dialog.Cancel
+
+            onAccepted: {
+                var provider = {
+                    displayName: displayNameField.text,
+                    url: urlField.text,
+                    token: tokenField.text,
+                    model: modelField.text
+                }
+                if (editingIndex >= 0) {
+                    root.updateProvider(editingIndex, provider)
+                } else {
+                    root.addProvider(provider)
                 }
             }
 
-            QQC2.ToolTip.text: i18nc("@info:tooltip", "Enable thinking for models that support reasoning")
-            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
-            QQC2.ToolTip.visible: hovered
-        }
+            Kirigami.FormLayout {
+                QQC2.TextField {
+                    id: displayNameField
+                    Kirigami.FormData.label: i18nc("@label:textbox", "Display Name:")
+                    Layout.fillWidth: true
+                    placeholderText: i18nc("@info:placeholder", "e.g., DeepSeek, Groq, OpenAI")
+                }
 
-        QQC2.Label {
-            text: i18nc("@info", "Enable thinking for models that support reasoning (e.g., o1, deepseek-r1)")
-            font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
+                QQC2.TextField {
+                    id: urlField
+                    Kirigami.FormData.label: i18nc("@label:textbox", "API URL:")
+                    Layout.fillWidth: true
+                    placeholderText: "https://api.openai.com/v1"
+                }
+
+                QQC2.TextField {
+                    id: tokenField
+                    Kirigami.FormData.label: i18nc("@label:textbox", "API Token:")
+                    Layout.fillWidth: true
+                    placeholderText: i18nc("@info:placeholder", "Enter your API token")
+                    echoMode: QQC2.TextField.Password
+                }
+
+                QQC2.TextField {
+                    id: modelField
+                    Kirigami.FormData.label: i18nc("@label:textbox", "Model:")
+                    Layout.fillWidth: true
+                    placeholderText: "gpt-4"
+                }
+            }
         }
     }
 }

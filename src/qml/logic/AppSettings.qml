@@ -16,6 +16,8 @@ QtObject {
     property string openaiCompatibleToken: _settings.value("openaiCompatibleToken", "")
     property string openaiCompatibleModel: _settings.value("openaiCompatibleModel", "")
     property bool openaiCompatibleDisableThinking: _settings.value("openaiCompatibleDisableThinking", false)
+    property string openaiCompatibleProviders: _settings.value("openaiCompatibleProviders", "[]")
+    property string selectedOpenAICompatibleProviderId: _settings.value("selectedOpenAICompatibleProviderId", "")
     property string opencodeUrl: _settings.value("opencodeUrl", "http://127.0.0.1:3000")
     property string opencodeUsername: _settings.value("opencodeUsername", "")
     property string opencodePassword: _settings.value("opencodePassword", "")
@@ -35,9 +37,64 @@ QtObject {
     function getProviderDisplayName() {
         if (provider === "ollama") return "Ollama"
         if (provider === "openclaw") return "OpenClaw"
-        if (provider === "openai-compatible") return openaiCompatibleModel || "OpenAI"
+        if (provider === "openai-compatible") {
+            var selectedProvider = getSelectedOpenAICompatibleProvider()
+            if (selectedProvider) {
+                return selectedProvider.displayName
+            }
+            return openaiCompatibleModel || "OpenAI"
+        }
         if (provider === "opencode") return "OpenCode"
         return "ChatQT"
+    }
+
+    function generateUuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0
+            var v = c === 'x' ? r : (r & 0x3 | 0x8)
+            return v.toString(16)
+        })
+    }
+
+    function getOpenaiCompatibleProviders() {
+        try {
+            var providers = JSON.parse(openaiCompatibleProviders)
+            return providers.map(function(p) {
+                if (p.enabled === undefined) {
+                    p.enabled = true
+                }
+                if (!p.id) {
+                    p.id = generateUuid()
+                }
+                return p
+            })
+        } catch (e) {
+            return []
+        }
+    }
+
+    function saveOpenaiCompatibleProviders(array) {
+        openaiCompatibleProviders = JSON.stringify(array)
+    }
+
+    function getFirstEnabledOpenAICompatibleProvider() {
+        var providers = getOpenaiCompatibleProviders()
+        for (var i = 0; i < providers.length; i++) {
+            if (providers[i].enabled === true) {
+                return providers[i]
+            }
+        }
+        return null
+    }
+
+    function getSelectedOpenAICompatibleProvider() {
+        var providers = getOpenaiCompatibleProviders()
+        for (var i = 0; i < providers.length; i++) {
+            if (providers[i].id === selectedOpenAICompatibleProviderId) {
+                return providers[i]
+            }
+        }
+        return null
     }
 
     function save() {
@@ -48,6 +105,7 @@ QtObject {
         _settings.setValue("openaiCompatibleToken", openaiCompatibleToken)
         _settings.setValue("openaiCompatibleModel", openaiCompatibleModel)
         _settings.setValue("openaiCompatibleDisableThinking", openaiCompatibleDisableThinking)
+        _settings.setValue("openaiCompatibleProviders", openaiCompatibleProviders)
         _settings.setValue("opencodeUrl", opencodeUrl)
         _settings.setValue("opencodeUsername", opencodeUsername)
         _settings.setValue("opencodePassword", opencodePassword)
@@ -56,6 +114,7 @@ QtObject {
         _settings.setValue("openclawEnabled", openclawEnabled)
         _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
         _settings.setValue("opencodeEnabled", opencodeEnabled)
+        _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
         _settings.sync()
     }
 
@@ -70,6 +129,7 @@ QtObject {
     onOpenaiCompatibleTokenChanged: save()
     onOpenaiCompatibleModelChanged: save()
     onOpenaiCompatibleDisableThinkingChanged: save()
+    onOpenaiCompatibleProvidersChanged: save()
     onOpencodeUrlChanged: save()
     onOpencodeUsernameChanged: save()
     onOpencodePasswordChanged: save()
@@ -78,4 +138,5 @@ QtObject {
     onOpenclawEnabledChanged: save()
     onOpenaiCompatibleEnabledChanged: save()
     onOpencodeEnabledChanged: save()
+    onSelectedOpenAICompatibleProviderIdChanged: save()
 }

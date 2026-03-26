@@ -21,12 +21,6 @@ Kirigami.Page {
         RowLayout {
             spacing: Kirigami.Units.smallSpacing
 
-            Controls.Label {
-                text: i18n("Provider:")
-                color: Kirigami.Theme.textColor
-                Layout.alignment: Qt.AlignVCenter
-            }
-
             Controls.ComboBox {
                 id: providerComboBox
 
@@ -38,8 +32,14 @@ Kirigami.Page {
                 valueRole: "value"
 
                 currentIndex: {
+                    // Construct the full provider value for comparison
+                    var currentValue = appSettings.provider
+                    if (currentValue === "openai-compatible" && appSettings.selectedOpenAICompatibleProviderId) {
+                        currentValue = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
+                    }
+
                     for (let i = 0; i < root.enabledProviderOptions.length; i++) {
-                        if (root.enabledProviderOptions[i].value === appSettings.provider) {
+                        if (root.enabledProviderOptions[i].value === currentValue) {
                             return i;
                         }
                     }
@@ -71,13 +71,38 @@ Kirigami.Page {
     property bool hasLocalModel: false
     property bool disableAutoScroll: false
     property string currentProvider: appSettings.provider
-    property bool thinkingEnabled: !appSettings.openaiCompatibleDisableThinking
-    property var providerOptions: [
-        { text: "Ollama", value: "ollama" },
-        { text: "OpenClaw", value: "openclaw" },
-        { text: "OpenAI Compatible", value: "openai-compatible" },
-        { text: "OpenCode", value: "opencode" }
-    ]
+    property bool thinkingEnabled: {
+        var provider = appSettings.getSelectedOpenAICompatibleProvider()
+        if (provider) {
+            return !appSettings.openaiCompatibleDisableThinking
+        }
+        return !appSettings.openaiCompatibleDisableThinking
+    }
+
+    function buildProviderOptions() {
+        var options = [
+            { text: "Ollama", value: "ollama" },
+            { text: "OpenClaw", value: "openclaw" },
+            { text: "OpenCode", value: "opencode" }
+        ]
+
+        // Add each enabled OpenAI Compatible provider
+        if (appSettings && appSettings.openaiCompatibleEnabled) {
+            var providers = appSettings.getOpenaiCompatibleProviders()
+            for (var i = 0; i < providers.length; i++) {
+                if (providers[i].enabled) {
+                    options.push({
+                        text: providers[i].displayName + " (OpenAI Compatible)",
+                        value: "openai-compatible:" + providers[i].id
+                    })
+                }
+            }
+        }
+
+        return options
+    }
+
+    property var providerOptions: buildProviderOptions()
 
     property var enabledProviderOptions: providerOptions.filter(function(opt) {
         if (!appSettings) return true
@@ -106,8 +131,26 @@ Kirigami.Page {
         // Clear chat when switching providers to avoid context confusion
         clearChat();
 
-        // Update provider in settings
-        appSettings.provider = newProvider;
+        // Handle OpenAI Compatible provider selection
+        if (newProvider.startsWith("openai-compatible:")) {
+            var providerId = newProvider.substring("openai-compatible:".length)
+            appSettings.selectedOpenAICompatibleProviderId = providerId
+            // Also set the base provider
+            appSettings.provider = "openai-compatible"
+            
+            // Auto-select the first enabled if none selected
+            if (!appSettings.getSelectedOpenAICompatibleProvider()) {
+                var providers = appSettings.getOpenaiCompatibleProviders()
+                for (var i = 0; i < providers.length; i++) {
+                    if (providers[i].enabled) {
+                        appSettings.selectedOpenAICompatibleProviderId = providers[i].id
+                        break
+                    }
+                }
+            }
+        } else {
+            appSettings.provider = newProvider;
+        }
 
         // Update local property
         currentProvider = newProvider;
@@ -127,15 +170,14 @@ Kirigami.Page {
             return hasLocalModel;
         } else if (provider === "openclaw") {
             return appSettings.openclawUrl && appSettings.openclawToken;
-        } else if (provider === "openai-compatible") {
-            return appSettings.openaiCompatibleUrl &&
-                   appSettings.openaiCompatibleToken &&
-                   appSettings.openaiCompatibleModel;
         } else if (provider === "opencode") {
             return appSettings.opencodeUrl &&
                    appSettings.opencodeUsername &&
                    appSettings.opencodePassword &&
                    appSettings.opencodeModel;
+        } else if (currentProvider.startsWith("openai-compatible")) {
+            var openaiProvider = appSettings.getSelectedOpenAICompatibleProvider()
+            return openaiProvider && openaiProvider.url && openaiProvider.token && openaiProvider.model;
         }
         return false;
     }
@@ -145,10 +187,10 @@ Kirigami.Page {
             return i18n("No local model found.\nPlease install some first.\n\nIf you need help, check Ollama documentation.");
         } else if (currentProvider === "openclaw") {
             return i18n("OpenClaw not configured.\nPlease set URL and Token in settings.");
-        } else if (currentProvider === "openai-compatible") {
-            return i18n("OpenAI Compatible not configured.\nPlease set URL, Token and Model in settings.");
         } else if (currentProvider === "opencode") {
             return i18n("OpenCode not configured.\nPlease set URL, Username, Password and Model in settings.");
+        } else if (currentProvider.startsWith("openai-compatible")) {
+            return i18n("OpenAI Compatible provider not configured.\nPlease configure it in settings.");
         }
         return i18n("Provider not configured.");
     }
@@ -211,19 +253,22 @@ Kirigami.Page {
                 handleStreaming,
                 handleRequestComplete
             );
-        } else if (currentProvider === "openai-compatible") {
-            ApiClient.requestOpenAICompatible(
-                appSettings.openaiCompatibleUrl,
-                appSettings.openaiCompatibleToken,
-                appSettings.openaiCompatibleModel,
-                promptArray,
-                thinkingEnabled,
-                null,
-                false,
-                listModel,
-                handleStreaming,
-                handleRequestComplete
-            );
+        } else if (currentProvider.startsWith("openai-compatible:")) {
+            var provider = appSettings.getSelectedOpenAICompatibleProvider()
+            if (provider) {
+                ApiClient.requestOpenAICompatible(
+                    provider.url,
+                    provider.token,
+                    provider.model,
+                    promptArray,
+                    thinkingEnabled,
+                    null,
+                    false,
+                    listModel,
+                    handleStreaming,
+                    handleRequestComplete
+                );
+            }
         } else if (currentProvider === "opencode") {
             OpenCodeClient.requestOpenCode(
                 appSettings.opencodeUrl,
