@@ -280,6 +280,7 @@ Kirigami.Page {
         if (currentProvider === "ollama") {
             getModels();
         }
+        messageInput.focusInput();
     }
 
     actions: [

@@ -59,6 +59,7 @@ RowLayout {
                 TextArea.flickable: TextArea {
                     id: messageField
 
+                    focus: true
                     placeholderText: i18n("Type your message...")
                     wrapMode: TextArea.Wrap
                     rightPadding: verticalScrollBar.visible ? verticalScrollBar.width + Kirigami.Units.smallSpacing : Kirigami.Units.smallSpacing
@@ -121,5 +122,9 @@ RowLayout {
 
     function clearText() {
         messageField.text = ''
+    }
+
+    function focusInput() {
+        messageField.forceActiveFocus()
     }
 }
