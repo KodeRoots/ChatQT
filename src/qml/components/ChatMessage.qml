@@ -13,6 +13,8 @@ Kirigami.AbstractCard {
 
     property string messageText: ""
     property string senderName: ""
+    property string thinkingText: ""
+    property bool thinkingExpanded: false
 
     readonly property bool isUser: senderName === "User"
 
@@ -28,6 +30,58 @@ Kirigami.AbstractCard {
             font.weight: Font.Bold
             font.pointSize: Kirigami.Theme.smallFont.pointSize
             color: isUser ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
+        }
+
+        ColumnLayout {
+            visible: root.thinkingText !== ""
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.AbstractButton {
+                Layout.fillWidth: true
+                implicitHeight: thinkingHeaderLayout.implicitHeight + Kirigami.Units.smallSpacing * 2
+
+                contentItem: RowLayout {
+                    id: thinkingHeaderLayout
+                    spacing: Kirigami.Units.smallSpacing
+
+                    Kirigami.Icon {
+                        source: root.thinkingExpanded ? "arrow-down" : "arrow-right"
+                        implicitWidth: Kirigami.Units.smallSpacing
+                        implicitHeight: Kirigami.Units.smallSpacing
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+
+                    Controls.Label {
+                        text: i18n("Thinking...")
+                        font: Kirigami.Theme.smallFont
+                        color: Kirigami.Theme.disabledTextColor
+                    }
+                }
+
+                onClicked: root.thinkingExpanded = !root.thinkingExpanded
+            }
+
+            Item {
+                Layout.fillWidth: true
+                implicitHeight: root.thinkingExpanded ? thinkingContentText.implicitHeight : 0
+                clip: true
+
+                Behavior on implicitHeight {
+                    NumberAnimation {
+                        duration: Kirigami.Units.longDuration
+                        easing.type: Easing.InOutQuad
+                    }
+                }
+
+                Text {
+                    id: thinkingContentText
+                    width: parent.width
+                    text: root.thinkingText
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                    wrapMode: Text.Wrap
+                }
+            }
         }
 
         TextEdit {

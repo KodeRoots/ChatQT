@@ -210,7 +210,7 @@ Kirigami.Page {
         return i18n("Provider not configured.");
     }
 
-    function handleStreaming(text, oldLength, listModel) {
+    function handleStreaming(text, oldLength, listModel, thinkingText) {
         if (!disableAutoScroll && listView.contentHeight > listView.height) {
             listView.positionViewAtEnd();
         }
@@ -218,11 +218,14 @@ Kirigami.Page {
         if (listModel.count === oldLength) {
             listModel.append({
                 "name": "Assistant",
-                "content": text
+                "content": text,
+                "thinkingContent": thinkingText !== undefined ? thinkingText : ""
             });
         } else {
-            const lastValue = listModel.get(oldLength);
-            lastValue.content = text;
+            listModel.setProperty(oldLength, "content", text);
+            if (thinkingText !== undefined) {
+                listModel.setProperty(oldLength, "thinkingContent", thinkingText);
+            }
         }
     }
 
@@ -239,7 +242,8 @@ Kirigami.Page {
 
         listModel.append({
             "name": "User",
-            "content": prompt
+            "content": prompt,
+            "thinkingContent": ""
         });
 
         promptArray.push({ "role": "user", "content": prompt, "images": [] });
@@ -384,6 +388,7 @@ Kirigami.Page {
                 width: listView.width - Kirigami.Units.largeSpacing * 2
                 messageText: ApiClient.preprocessMarkdown(content)
                 senderName: name
+                thinkingText: thinkingContent || ""
             }
 
             Controls.ScrollBar.vertical: Controls.ScrollBar {}
