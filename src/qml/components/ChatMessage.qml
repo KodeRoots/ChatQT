@@ -46,12 +46,13 @@ Kirigami.AbstractCard {
 
                     Kirigami.Icon {
                         source: root.thinkingExpanded ? "arrow-down" : "arrow-right"
-                        implicitWidth: Kirigami.Units.smallSpacing
-                        implicitHeight: Kirigami.Units.smallSpacing
+                        implicitWidth: Kirigami.Units.mediumSpacing
+                        implicitHeight: Kirigami.Units.mediumSpacing
                         color: Kirigami.Theme.disabledTextColor
                     }
 
                     Controls.Label {
+                        Layout.fillWidth: true
                         text: i18n("Thinking...")
                         font: Kirigami.Theme.smallFont
                         color: Kirigami.Theme.disabledTextColor
