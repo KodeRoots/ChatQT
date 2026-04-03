@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.koderoots.chatqt</id>
+
+  <name>ChatQT</name>
+  <summary>A simple AI chat client for OpenAI-compatible providers</summary>
+
+  <developer id="org.koderoots">
+    <name>Denys Madureira</name>
+  </developer>
+
+  <launchable type="desktop-id">org.koderoots.chatqt.desktop</launchable>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LGPL-2.1-or-later</project_license>
+
+  <categories>
+    <category>Network</category>
+    <category>Chat</category>
+    <category>KDE</category>
+  </categories>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#E2E2E2</color>
+    <color type="primary" scheme_preference="dark">#F46A4F</color>
+  </branding>
+
+  <description>
+    <p>
+      ChatQT is a native KDE application that provides a simple and intuitive interface for
+      chatting with AI models via OpenAI-compatible APIs.
+    </p>
+    <p>
+      <em>Multiple provider support</em>: Connect to OpenAI, OpenCode, or any OpenAI-compatible API.
+    </p>
+    <p>
+      <em>Simple interface</em>: Clean and intuitive design built with Kirigami for a seamless experience.
+    </p>
+    <p>
+      <em>Native KDE integration</em>: Built with Qt/QML for seamless Plasma desktop experience.
+    </p>
+    <p>
+      <em>Chat management</em>: Clear chat history and control auto-scroll behavior.
+    </p>
+  </description>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://i.imgur.com/placeholder.png</image>
+      <caption>ChatQT main window</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/DenysMb/ChatQT</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.0.0" date="2026-04-03">
+      <description>
+        <p>Initial release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

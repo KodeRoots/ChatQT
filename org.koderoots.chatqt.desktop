@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Denys Madureira <denys.madureira@pm.me>
+# SPDX-License-Identifier: CC0-1.0
+
+[Desktop Entry]
+Name=ChatQT
+Exec=chatqt
+Icon=org.koderoots.chatqt
+Type=Application
+Terminal=false
+Categories=Network;Chat;KDE;
+Keywords=chat;ai;openai;assistant;
+Comment=A simple AI chat client for OpenAI-compatible providers
