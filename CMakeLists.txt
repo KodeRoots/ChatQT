@@ -84,6 +84,6 @@ target_link_libraries(chatqt PRIVATE
 target_include_directories(chatqt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 install(TARGETS chatqt ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
-install(FILES resources/icons/io.github.denysmb.chatqt.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
+install(FILES resources/icons/org.koderoots.chatqt.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
