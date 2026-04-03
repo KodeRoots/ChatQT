@@ -23,7 +23,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("io.github.denysmb.chatqt")));
+    app.setWindowIcon(QIcon::fromTheme(QStringLiteral("org.koderoots.chatqt")));
 
     KCrash::initialize();
     KLocalizedString::setApplicationDomain("chatqt");
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
         i18n("(c) 2024 Denys Madureira")
     );
     aboutData.addAuthor(i18nc("@info:credit", "Denys Madureira"), QString(), QStringLiteral("denysmb@zoho.com"));
-    aboutData.setDesktopFileName(QStringLiteral("io.github.denysmb.chatqt"));
+    aboutData.setDesktopFileName(QStringLiteral("org.koderoots.chatqt"));
     KAboutData::setApplicationData(aboutData);
 
     if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
         }
     });
 
-    const QUrl url(QStringLiteral("qrc:/io/github/denysmb/chatqt/src/qml/main.qml"));
+    const QUrl url(QStringLiteral("qrc:/org/koderoots/chatqt/src/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl) {
