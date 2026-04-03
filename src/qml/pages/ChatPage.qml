@@ -32,10 +32,12 @@ Kirigami.Page {
                 valueRole: "value"
 
                 currentIndex: {
-                    // Construct the full provider value for comparison
                     var currentValue = appSettings.provider
                     if (currentValue === "openai-compatible" && appSettings.selectedOpenAICompatibleProviderId) {
                         currentValue = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
+                    }
+                    if (currentValue === "openclaw" && appSettings.selectedOpenClawInstanceId) {
+                        currentValue = "openclaw:" + appSettings.selectedOpenClawInstanceId
                     }
 
                     for (let i = 0; i < root.enabledProviderOptions.length; i++) {
@@ -43,7 +45,6 @@ Kirigami.Page {
                             return i;
                         }
                     }
-                    // If current provider is disabled, switch to first enabled
                     if (root.enabledProviderOptions.length > 0) {
                         root.switchProvider(root.enabledProviderOptions[0].value)
                     }
@@ -97,11 +98,21 @@ Kirigami.Page {
     function buildProviderOptions() {
         var options = [
             { text: "Ollama", value: "ollama" },
-            { text: "OpenClaw", value: "openclaw" },
             { text: "OpenCode", value: "opencode" }
         ]
 
-        // Add each enabled OpenAI Compatible provider
+        if (appSettings && appSettings.openclawEnabled) {
+            var instances = appSettings.getOpenClawInstances()
+            for (var i = 0; i < instances.length; i++) {
+                if (instances[i].enabled) {
+                    options.push({
+                        text: instances[i].displayName + " (OpenClaw)",
+                        value: "openclaw:" + instances[i].id
+                    })
+                }
+            }
+        }
+
         if (appSettings && appSettings.openaiCompatibleEnabled) {
             var providers = appSettings.getOpenaiCompatibleProviders()
             for (var i = 0; i < providers.length; i++) {
@@ -121,7 +132,8 @@ Kirigami.Page {
 
     property var enabledProviderOptions: providerOptions.filter(function(opt) {
         if (!appSettings) return true
-        switch (opt.value) {
+        var baseProvider = opt.value.split(":")[0]
+        switch (baseProvider) {
             case "ollama": return appSettings.ollamaEnabled
             case "openclaw": return appSettings.openclawEnabled
             case "openai-compatible": return appSettings.openaiCompatibleEnabled
@@ -143,17 +155,13 @@ Kirigami.Page {
     function switchProvider(newProvider) {
         if (newProvider === appSettings.provider) return;
 
-        // Clear chat when switching providers to avoid context confusion
         clearChat();
 
-        // Handle OpenAI Compatible provider selection
         if (newProvider.startsWith("openai-compatible:")) {
             var providerId = newProvider.substring("openai-compatible:".length)
             appSettings.selectedOpenAICompatibleProviderId = providerId
-            // Also set the base provider
             appSettings.provider = "openai-compatible"
             
-            // Auto-select the first enabled if none selected
             if (!appSettings.getSelectedOpenAICompatibleProvider()) {
                 var providers = appSettings.getOpenaiCompatibleProviders()
                 for (var i = 0; i < providers.length; i++) {
@@ -163,19 +171,30 @@ Kirigami.Page {
                     }
                 }
             }
+        } else if (newProvider.startsWith("openclaw:")) {
+            var instanceId = newProvider.substring("openclaw:".length)
+            appSettings.selectedOpenClawInstanceId = instanceId
+            appSettings.provider = "openclaw"
+            
+            if (!appSettings.getSelectedOpenClawInstance()) {
+                var instances = appSettings.getOpenClawInstances()
+                for (var i = 0; i < instances.length; i++) {
+                    if (instances[i].enabled) {
+                        appSettings.selectedOpenClawInstanceId = instances[i].id
+                        break
+                    }
+                }
+            }
         } else {
             appSettings.provider = newProvider;
         }
 
-        // Update local property
         currentProvider = newProvider;
 
-        // Load models if switching to Ollama
         if (newProvider === "ollama") {
             getModels();
         }
 
-        // Show notification
         applicationWindow().showPassiveNotification(i18n("Switched to %1", appSettings.getProviderDisplayName()));
     }
 
@@ -183,8 +202,9 @@ Kirigami.Page {
         const provider = currentProvider;
         if (provider === "ollama") {
             return hasLocalModel;
-        } else if (provider === "openclaw") {
-            return appSettings.openclawUrl && appSettings.openclawToken;
+        } else if (provider.startsWith("openclaw")) {
+            var instance = appSettings.getSelectedOpenClawInstance()
+            return instance && instance.url && instance.token;
         } else if (provider === "opencode") {
             return appSettings.opencodeUrl &&
                    appSettings.opencodeUsername &&
@@ -200,8 +220,8 @@ Kirigami.Page {
     function getProviderNotConfiguredMessage() {
         if (currentProvider === "ollama") {
             return i18n("No local model found.\nPlease install some first.\n\nIf you need help, check Ollama documentation.");
-        } else if (currentProvider === "openclaw") {
-            return i18n("OpenClaw not configured.\nPlease set URL and Token in settings.");
+        } else if (currentProvider.startsWith("openclaw")) {
+            return i18n("OpenClaw instance not configured.\nPlease set URL and Token in settings.");
         } else if (currentProvider === "opencode") {
             return i18n("OpenCode not configured.\nPlease set URL, Username, Password and Model in settings.");
         } else if (currentProvider.startsWith("openai-compatible")) {
@@ -259,19 +279,22 @@ Kirigami.Page {
                 handleStreaming,
                 handleRequestComplete
             );
-        } else if (currentProvider === "openclaw") {
-            ApiClient.requestOpenAICompatible(
-                appSettings.openclawUrl,
-                appSettings.openclawToken,
-                "openclaw",
-                promptArray,
-                true,
-                { "x-openclaw-agent-id": "main" },
-                true,
-                listModel,
-                handleStreaming,
-                handleRequestComplete
-            );
+        } else if (currentProvider.startsWith("openclaw")) {
+            var instance = appSettings.getSelectedOpenClawInstance()
+            if (instance) {
+                ApiClient.requestOpenAICompatible(
+                    instance.url,
+                    instance.token,
+                    "openclaw",
+                    promptArray,
+                    true,
+                    { "x-openclaw-agent-id": "main" },
+                    true,
+                    listModel,
+                    handleStreaming,
+                    handleRequestComplete
+                );
+            }
         } else if (currentProvider.startsWith("openai-compatible:")) {
             var provider = appSettings.getSelectedOpenAICompatibleProvider()
             if (provider) {

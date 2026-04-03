@@ -57,6 +57,7 @@ qt_add_qml_module(chatqt
         src/qml/components/MessageInput.qml
         src/qml/components/ServerStatusIndicator.qml
         src/qml/components/ProviderCard.qml
+        src/qml/components/InstanceCard.qml
         src/qml/settings/SettingsPage.qml
         src/qml/settings/SettingsGeneral.qml
         src/qml/settings/SettingsOpenClaw.qml

@@ -18,6 +18,8 @@ QtObject {
     property bool openaiCompatibleDisableThinking: _settings.value("openaiCompatibleDisableThinking", false)
     property string openaiCompatibleProviders: _settings.value("openaiCompatibleProviders", "[]")
     property string selectedOpenAICompatibleProviderId: _settings.value("selectedOpenAICompatibleProviderId", "")
+    property string openclawInstances: _settings.value("openclawInstances", "[]")
+    property string selectedOpenClawInstanceId: _settings.value("selectedOpenClawInstanceId", "")
     property string opencodeUrl: _settings.value("opencodeUrl", "http://127.0.0.1:3000")
     property string opencodeUsername: _settings.value("opencodeUsername", "")
     property string opencodePassword: _settings.value("opencodePassword", "")
@@ -36,7 +38,13 @@ QtObject {
 
     function getProviderDisplayName() {
         if (provider === "ollama") return "Ollama"
-        if (provider === "openclaw") return "OpenClaw"
+        if (provider === "openclaw") {
+            var selectedInstance = getSelectedOpenClawInstance()
+            if (selectedInstance) {
+                return selectedInstance.displayName
+            }
+            return "OpenClaw"
+        }
         if (provider === "openai-compatible") {
             var selectedProvider = getSelectedOpenAICompatibleProvider()
             if (selectedProvider) {
@@ -97,6 +105,47 @@ QtObject {
         return null
     }
 
+    function getOpenClawInstances() {
+        try {
+            var instances = JSON.parse(openclawInstances)
+            return instances.map(function(i) {
+                if (i.enabled === undefined) {
+                    i.enabled = true
+                }
+                if (!i.id) {
+                    i.id = generateUuid()
+                }
+                return i
+            })
+        } catch (e) {
+            return []
+        }
+    }
+
+    function saveOpenClawInstances(array) {
+        openclawInstances = JSON.stringify(array)
+    }
+
+    function getFirstEnabledOpenClawInstance() {
+        var instances = getOpenClawInstances()
+        for (var i = 0; i < instances.length; i++) {
+            if (instances[i].enabled === true) {
+                return instances[i]
+            }
+        }
+        return null
+    }
+
+    function getSelectedOpenClawInstance() {
+        var instances = getOpenClawInstances()
+        for (var i = 0; i < instances.length; i++) {
+            if (instances[i].id === selectedOpenClawInstanceId) {
+                return instances[i]
+            }
+        }
+        return null
+    }
+
     function save() {
         _settings.setValue("provider", provider)
         _settings.setValue("openclawUrl", openclawUrl)
@@ -115,6 +164,8 @@ QtObject {
         _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
         _settings.setValue("opencodeEnabled", opencodeEnabled)
         _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
+        _settings.setValue("openclawInstances", openclawInstances)
+        _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
         _settings.sync()
     }
 
@@ -139,4 +190,23 @@ QtObject {
     onOpenaiCompatibleEnabledChanged: save()
     onOpencodeEnabledChanged: save()
     onSelectedOpenAICompatibleProviderIdChanged: save()
+    onOpenclawInstancesChanged: save()
+    onSelectedOpenClawInstanceIdChanged: save()
+
+    Component.onCompleted: {
+        if (openclawInstances === "[]") {
+            if (openclawUrl !== "http://127.0.0.1:18789" || openclawToken !== "") {
+                var migratedInstance = {
+                    id: generateUuid(),
+                    displayName: "OpenClaw",
+                    url: openclawUrl,
+                    token: openclawToken,
+                    enabled: true
+                }
+                openclawInstances = JSON.stringify([migratedInstance])
+                selectedOpenClawInstanceId = migratedInstance.id
+                console.log("Migrated existing OpenClaw settings to multi-instance format")
+            }
+        }
+    }
 }
