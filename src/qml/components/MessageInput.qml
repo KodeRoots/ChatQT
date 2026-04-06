@@ -13,9 +13,13 @@ RowLayout {
     id: root
 
     signal sendMessage(string message)
+    signal cancelOrStop()
 
     property bool isProviderConfigured: false
     property bool isLoading: false
+    property bool isStreaming: false
+
+    property alias textField: messageField
 
     spacing: Kirigami.Units.smallSpacing
 
@@ -70,8 +74,13 @@ RowLayout {
 
                     Keys.onReturnPressed: {
                         if (event.modifiers & Qt.ControlModifier) {
-                            root.sendMessage(messageField.text)
-                            messageField.text = ""
+                            if (root.isLoading) {
+                                root.cancelOrStop()
+                                event.accepted = true
+                            } else {
+                                root.sendMessage(messageField.text)
+                                messageField.text = ""
+                            }
                         } else {
                             event.accepted = false;
                         }
@@ -93,18 +102,30 @@ RowLayout {
         Layout.preferredHeight: container.height
 
         visible: root.isProviderConfigured
-        enabled: root.isProviderConfigured && !root.isLoading && messageField.text.trim()
 
-        text: i18n("Send")
-        icon.name: "document-send"
+        // Dynamic enable state
+        enabled: root.isProviderConfigured && (
+            root.isLoading ? true : !root.isLoading && messageField.text.trim()
+        )
+
+        // Dynamic text
+        text: root.isLoading ? (root.isStreaming ? i18n("Stop") : i18n("Cancel")) : i18n("Send")
+
+        // Dynamic icon
+        icon.name: root.isLoading ? "process-stop" : "document-send"
+
         display: Controls.AbstractButton.IconOnly
 
-        Controls.ToolTip.text: i18n("Send message (Ctrl+Enter)")
+        Controls.ToolTip.text: root.isLoading
+            ? (root.isStreaming ? i18n("Stop streaming (Ctrl+Enter)") : i18n("Cancel request (Ctrl+Enter)"))
+            : i18n("Send message (Ctrl+Enter)")
         Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
         Controls.ToolTip.visible: hovered
 
         onClicked: {
-            if (messageField.text.trim()) {
+            if (root.isLoading) {
+                root.cancelOrStop()
+            } else if (messageField.text.trim()) {
                 root.sendMessage(messageField.text)
                 messageField.text = ""
             }

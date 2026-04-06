@@ -94,6 +94,9 @@ Kirigami.Page {
         }
         return !appSettings.openaiCompatibleDisableThinking
     }
+    property bool isStreaming: false
+    property string lastSentMessage: ""
+    property var activeXhr: null
 
     function buildProviderOptions() {
         var options = [
@@ -231,6 +234,8 @@ Kirigami.Page {
     }
 
     function handleStreaming(text, oldLength, listModel, thinkingText) {
+        isStreaming = true;
+
         if (!disableAutoScroll && listView.contentHeight > listView.height) {
             listView.positionViewAtEnd();
         }
@@ -250,15 +255,76 @@ Kirigami.Page {
     }
 
     function handleRequestComplete(oldLength, listModel) {
+        if (activeXhr === null) return;
+        
         if (listModel.count > oldLength) {
             const lastValue = listModel.get(oldLength);
             promptArray.push({ "role": "assistant", "content": lastValue.content, "images": [] });
         }
         isLoading = false;
+        
+        activeXhr = null;
+        isStreaming = false;
+    }
+
+    function cancelRequest() {
+        if (!isLoading) return "";
+        
+        var wasStreamingBeforeAbort = isStreaming;
+        
+        // Abort active request based on provider
+        if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
+            ApiClient.abortActiveRequest();
+        } else if (currentProvider === "opencode") {
+            OpenCodeClient.abortActiveRequest();
+        }
+        activeXhr = null;
+        
+        var restoreText = "";
+        
+        if (!wasStreamingBeforeAbort) {
+            // No response received yet - remove the empty AI message and restore user's text
+            if (listModelController.count > 0) {
+                listModelController.remove(listModelController.count - 1);
+            }
+            promptArray.pop();
+            restoreText = lastSentMessage;
+        }
+        
+        isLoading = false;
+        isStreaming = false;
+        return restoreText;
+    }
+
+    function stopRequest() {
+        if (!isLoading) return;
+        
+        // Abort active request
+        if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
+            ApiClient.abortActiveRequest();
+        } else if (currentProvider === "opencode") {
+            OpenCodeClient.abortActiveRequest();
+        }
+        activeXhr = null;
+        
+        // Keep partial response in history
+        if (listModelController.count > 0) {
+            var lastIndex = listModelController.count - 1;
+            var lastItem = listModelController.get(lastIndex);
+            if (lastItem && lastItem.name === "Assistant") {
+                promptArray.push({ "role": "assistant", "content": lastItem.content, "images": [] });
+            }
+        }
+        
+        isLoading = false;
+        isStreaming = false;
     }
 
     function sendMessage(prompt) {
         if (!prompt.trim() || isLoading) return;
+
+        lastSentMessage = prompt;
+        isStreaming = false;
 
         listModel.append({
             "name": "User",
@@ -272,7 +338,7 @@ Kirigami.Page {
         listView.positionViewAtEnd();
 
         if (currentProvider === "ollama") {
-            ApiClient.requestOllama(
+            activeXhr = ApiClient.requestOllama(
                 currentModel,
                 promptArray,
                 listModel,
@@ -282,7 +348,7 @@ Kirigami.Page {
         } else if (currentProvider.startsWith("openclaw")) {
             var instance = appSettings.getSelectedOpenClawInstance()
             if (instance) {
-                ApiClient.requestOpenAICompatible(
+                activeXhr = ApiClient.requestOpenAICompatible(
                     instance.url,
                     instance.token,
                     "openclaw",
@@ -298,7 +364,7 @@ Kirigami.Page {
         } else if (currentProvider.startsWith("openai-compatible:")) {
             var provider = appSettings.getSelectedOpenAICompatibleProvider()
             if (provider) {
-                ApiClient.requestOpenAICompatible(
+                activeXhr = ApiClient.requestOpenAICompatible(
                     provider.url,
                     provider.token,
                     provider.model,
@@ -312,7 +378,7 @@ Kirigami.Page {
                 );
             }
         } else if (currentProvider === "opencode") {
-            OpenCodeClient.requestOpenCode(
+            activeXhr = OpenCodeClient.requestOpenCode(
                 appSettings.opencodeUrl,
                 appSettings.opencodeUsername,
                 appSettings.opencodePassword,
@@ -476,6 +542,15 @@ Kirigami.Page {
 
             isProviderConfigured: root.isProviderConfigured()
             isLoading: root.isLoading
+            isStreaming: root.isStreaming
+
+            onCancelOrStop: {
+                var restoreText = root.cancelRequest();
+                if (restoreText) {
+                    messageInput.clearText();
+                    messageInput.textField.text = restoreText;
+                }
+            }
 
             onSendMessage: function(message) {
                 root.sendMessage(message);

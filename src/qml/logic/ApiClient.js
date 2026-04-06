@@ -5,6 +5,19 @@
 
 .pragma library
 
+var _activeXhr = null;
+
+function abortActiveRequest() {
+    if (_activeXhr) {
+        _activeXhr.onreadystatechange = function() {};
+        _activeXhr.onload = function() {};
+        _activeXhr.abort();
+        _activeXhr = null;
+        return true;
+    }
+    return false;
+}
+
 function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete) {
     const oldLength = listModel.count;
     const url = 'http://127.0.0.1:11434/api/chat';
@@ -16,6 +29,7 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
     });
 
     let xhr = new XMLHttpRequest();
+    _activeXhr = xhr;
 
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -48,6 +62,7 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
     };
 
     xhr.send(data);
+    return xhr;
 }
 
 function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEnabled, extraHeaders, includeV1, listModel, onStreaming, onComplete) {
@@ -71,6 +86,7 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
     const data = JSON.stringify(requestData);
 
     let xhr = new XMLHttpRequest();
+    _activeXhr = xhr;
 
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -150,6 +166,7 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
     };
 
     xhr.send(data);
+    return xhr;
 }
 
 function getOllamaModels(onSuccess, onError) {

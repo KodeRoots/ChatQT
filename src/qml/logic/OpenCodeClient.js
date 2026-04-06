@@ -5,6 +5,19 @@
 
 .pragma library
 
+var _activeXhr = null;
+
+function abortActiveRequest() {
+    if (_activeXhr) {
+        _activeXhr.onreadystatechange = function() {};
+        _activeXhr.onload = function() {};
+        _activeXhr.abort();
+        _activeXhr = null;
+        return true;
+    }
+    return false;
+}
+
 // Session cache: stores session ID for the current conversation
 var currentSessionId = null;
 
@@ -77,7 +90,9 @@ function createSession(baseUrl, username, password, onSuccess, onError) {
         }
     };
     
+    _activeXhr = xhr;
     xhr.send(JSON.stringify({}));
+    return xhr;
 }
 
 /**
@@ -140,6 +155,7 @@ function requestOpenCode(baseUrl, username, password, model, promptArray, listMo
         };
         
         var xhr = new XMLHttpRequest();
+        _activeXhr = xhr;
         xhr.open("POST", url, true);
         xhr.setRequestHeader("Content-Type", "application/json");
         xhr.setRequestHeader("Authorization", buildBasicAuth(username, password));
@@ -179,17 +195,19 @@ function requestOpenCode(baseUrl, username, password, model, promptArray, listMo
         };
         
         xhr.send(JSON.stringify(requestData));
+        return xhr;
     };
     
     // Create session if needed, then send message
     if (!currentSessionId) {
-        createSession(baseUrl, username, password, sendMessage, function(status, message) {
+        var sessionXhr = createSession(baseUrl, username, password, sendMessage, function(status, message) {
             console.error("OpenCode: Failed to create session:", status, message);
             if (typeof onComplete === "function") {
                 onComplete(oldLength, listModel);
             }
         });
+        return sessionXhr;
     } else {
-        sendMessage(currentSessionId);
+        return sendMessage(currentSessionId);
     }
 }
