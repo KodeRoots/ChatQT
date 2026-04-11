@@ -174,6 +174,11 @@ Kirigami.ScrollablePage {
 
             property int editingIndex: -1
 
+            leftPadding: Kirigami.Units.largeSpacing
+            rightPadding: Kirigami.Units.largeSpacing
+            topPadding: Kirigami.Units.largeSpacing
+            bottomPadding: Kirigami.Units.largeSpacing
+
             function openNewProvider() {
                 editingIndex = -1
                 displayNameField.text = i18nc("@info", "New Provider")
