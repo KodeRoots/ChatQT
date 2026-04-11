@@ -39,6 +39,9 @@ Kirigami.Page {
     property bool disableAutoScroll: false
     property string currentProvider: appSettings.provider
     property bool thinkingEnabled: {
+        if (currentProvider === "ollama") {
+            return !appSettings.ollamaDisableThinking
+        }
         var provider = appSettings.getSelectedOpenAICompatibleProvider()
         if (provider) {
             return !appSettings.openaiCompatibleDisableThinking
@@ -293,7 +296,8 @@ Kirigami.Page {
                 promptArray,
                 listModel,
                 handleStreaming,
-                handleRequestComplete
+                handleRequestComplete,
+                thinkingEnabled
             );
         } else if (currentProvider.startsWith("openclaw")) {
             var instance = appSettings.getSelectedOpenClawInstance()

@@ -18,13 +18,14 @@ function abortActiveRequest() {
     return false;
 }
 
-function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete) {
+function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete, thinkingEnabled) {
     const oldLength = listModel.count;
     const url = 'http://127.0.0.1:11434/api/chat';
     const data = JSON.stringify({
         "model": modelsComboboxCurrentValue,
         "keep_alive": "5m",
         "options": {},
+        "think": thinkingEnabled !== false,
         "messages": promptArray
     });
 
@@ -33,26 +34,50 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
 
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
+
+    let processedLength = 0;
+    let accumulatedText = '';
+    let accumulatedThinking = '';
+
     xhr.onreadystatechange = function() {
-        const objects = xhr.responseText.split('\n');
-        let text = '';
+        if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
+            const response = xhr.responseText;
 
-        objects.forEach((object, index) => {
-            try {
-                const parsedObject = JSON.parse(object);
-                text = text + (parsedObject?.message?.content || '');
+            if (response.length > processedLength) {
+                const newChunk = response.substring(processedLength);
+                processedLength = response.length;
 
-                if (index === 0) {
-                    text = text.trim();
+                const lines = newChunk.split('\n');
+                let hasUpdate = false;
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    try {
+                        const parsedObject = JSON.parse(line);
+                        const content = parsedObject?.message?.content;
+                        const thinking = parsedObject?.message?.thinking;
+
+                        // Accumulate incremental deltas
+                        if (content) {
+                            accumulatedText += content;
+                            hasUpdate = true;
+                        }
+                        if (thinking) {
+                            accumulatedThinking += thinking;
+                            hasUpdate = true;
+                        }
+                    } catch (e) {
+                        // Skip invalid JSON
+                    }
                 }
 
-                if (typeof onStreaming === 'function') {
-                    onStreaming(text, oldLength, listModel);
+                if (hasUpdate && typeof onStreaming === 'function') {
+                    onStreaming(accumulatedText, oldLength, listModel, accumulatedThinking);
                 }
-            } catch (e) {
-                // Skip invalid JSON
             }
-        });
+        }
     };
 
     xhr.onload = function() {
