@@ -5,6 +5,7 @@
 
 import QtQuick
 import QtCore
+import org.kde.chatqt
 
 QtObject {
     id: settings

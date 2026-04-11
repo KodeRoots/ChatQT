@@ -162,8 +162,7 @@ Kirigami.Page {
         } else if (provider === "opencode") {
             return appSettings.opencodeUrl &&
                    appSettings.opencodeUsername &&
-                   appSettings.opencodePassword &&
-                   appSettings.opencodeModel;
+                   appSettings.opencodePassword;
         } else if (currentProvider.startsWith("openai-compatible")) {
             var openaiProvider = appSettings.getSelectedOpenAICompatibleProvider()
             return openaiProvider && openaiProvider.url && openaiProvider.token && openaiProvider.model;
