@@ -133,6 +133,7 @@ RowLayout {
     }
 
     Controls.Label {
+        Layout.margins: Kirigami.Units.smallSpacing
         Layout.fillWidth: true
         visible: !root.isProviderConfigured
         text: i18n("Configure a provider to start chatting")

@@ -50,6 +50,9 @@ int main(int argc, char *argv[])
     // Register ProcessManager as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
 
+    QObject::connect(&app, &QApplication::aboutToQuit,
+                     ProcessManager::instance(), &ProcessManager::cleanShutdown);
+
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, [](const QList<QQmlError> &warnings) {
         for (const QQmlError &warning : warnings) {
             qWarning() << "QML Warning:" << warning.toString();

@@ -258,22 +258,51 @@ Kirigami.ScrollablePage {
             Kirigami.FormData.label: i18nc("@title:group", "Connection Settings")
         }
 
-        QQC2.Label {
+        QQC2.TextField {
+            id: hostField
             Kirigami.FormData.label: i18nc("@label", "Host:")
-            text: "127.0.0.1"
-            color: Kirigami.Theme.disabledTextColor
+            Layout.fillWidth: true
+            text: ProcessManager.host
+            placeholderText: "127.0.0.1"
+            enabled: !ProcessManager.running
+
+            onEditingFinished: {
+                ProcessManager.host = text.trim()
+            }
+
+            Connections {
+                target: ProcessManager
+                function onHostChanged() {
+                    hostField.text = ProcessManager.host
+                }
+            }
         }
 
-        QQC2.Label {
+        QQC2.SpinBox {
+            id: portSpinBox
             Kirigami.FormData.label: i18nc("@label", "Port:")
-            text: "4096"
-            color: Kirigami.Theme.disabledTextColor
+            from: 1
+            to: 65535
+            value: ProcessManager.port
+            editable: true
+            enabled: !ProcessManager.running
+
+            onValueModified: {
+                ProcessManager.port = value
+            }
+
+            Connections {
+                target: ProcessManager
+                function onPortChanged() {
+                    portSpinBox.value = ProcessManager.port
+                }
+            }
         }
 
         QQC2.Label {
             Kirigami.FormData.label: i18nc("@label", "URL:")
-            text: "http://127.0.0.1:4096"
-            color: Kirigami.Theme.disabledTextColor
+            text: ProcessManager.serverUrl
+            font.family: "monospace"
         }
 
         QQC2.TextField {
@@ -304,6 +333,47 @@ Kirigami.ScrollablePage {
             color: Kirigami.Theme.disabledTextColor
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
+        }
+
+        // ==================== Server Logs Section ====================
+        Kirigami.Separator {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18nc("@title:group", "Server Logs")
+        }
+
+        ListView {
+            id: logListView
+            Kirigami.FormData.label: i18nc("@label", "Output:")
+            Layout.fillWidth: true
+            Layout.preferredHeight: 200
+            clip: true
+
+            model: ProcessManager.logs
+            delegate: QQC2.Label {
+                width: logListView.width
+                text: modelData
+                font.family: "monospace"
+                font.pointSize: Kirigami.Theme.smallFont.pointSize
+                wrapMode: Text.WrapAtWordBoundaryOrAnywhere
+                color: modelData.indexOf("[ERROR]") >= 0 ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
+            }
+
+            QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
+
+            Connections {
+                target: ProcessManager
+                function onLogReceived() {
+                    Qt.callLater(function() {
+                        logListView.positionViewAtEnd()
+                    })
+                }
+            }
+
+            Component.onCompleted: {
+                if (ProcessManager.logs.length > 0) {
+                    logListView.positionViewAtEnd()
+                }
+            }
         }
     }
 }

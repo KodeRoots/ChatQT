@@ -452,6 +452,7 @@ Kirigami.Page {
 
         // OpenCode server status warning
         Kirigami.InlineMessage {
+            Layout.margins: Kirigami.Units.smallSpacing
             Layout.fillWidth: true
             visible: currentProvider === "opencode" && !ProcessManager.running
             type: Kirigami.MessageType.Warning

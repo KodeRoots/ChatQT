@@ -10,6 +10,9 @@
 #include <QCoreApplication>
 #include <QDateTime>
 #include <KLocalizedString>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 ProcessManager* ProcessManager::instance()
 {
@@ -29,6 +32,11 @@ ProcessManager::ProcessManager(QObject *parent)
     , m_autoRestart(true)
     , m_restartAttempts(0)
     , m_isShuttingDown(false)
+    , m_host(QStringLiteral("127.0.0.1"))
+    , m_port(4096)
+    , m_networkManager(new QNetworkAccessManager(this))
+    , m_pendingHealthCheck(nullptr)
+    , m_externalServer(false)
 {
     loadSettings();
 
@@ -54,15 +62,14 @@ ProcessManager::ProcessManager(QObject *parent)
 
     // Auto-start server if enabled
     if (m_autoStart && isBinaryValid()) {
-        QTimer::singleShot(500, this, &ProcessManager::start);
+        QTimer::singleShot(500, this, [this]() {
+            start();
+        });
     }
 }
 
 ProcessManager::~ProcessManager()
 {
-    if (m_running) {
-        stop();
-    }
     saveSettings();
 }
 
@@ -142,6 +149,46 @@ int ProcessManager::restartAttempts() const
     return m_restartAttempts;
 }
 
+QString ProcessManager::host() const
+{
+    return m_host;
+}
+
+void ProcessManager::setHost(const QString &host)
+{
+    if (m_host != host) {
+        m_host = host;
+        Q_EMIT hostChanged(host);
+        Q_EMIT serverUrlChanged(serverUrl());
+        saveSettings();
+    }
+}
+
+int ProcessManager::port() const
+{
+    return m_port;
+}
+
+void ProcessManager::setPort(int port)
+{
+    if (m_port != port) {
+        m_port = port;
+        Q_EMIT portChanged(port);
+        Q_EMIT serverUrlChanged(serverUrl());
+        saveSettings();
+    }
+}
+
+QString ProcessManager::serverUrl() const
+{
+    return QStringLiteral("http://%1:%2").arg(m_host).arg(m_port);
+}
+
+QStringList ProcessManager::logs() const
+{
+    return m_logBuffer;
+}
+
 void ProcessManager::start()
 {
     if (m_running) {
@@ -172,16 +219,9 @@ void ProcessManager::start()
     m_isShuttingDown = false;
     setStatus(QStringLiteral("starting"));
     addLog(QStringLiteral("Starting OpenCode server..."));
+    addLog(QStringLiteral("Checking if server is already running at %1:%2...").arg(m_host).arg(m_port));
 
-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert(QStringLiteral("OPENCODE_SERVER_PASSWORD"), m_password);
-
-    m_process->setProcessEnvironment(env);
-    m_process->setWorkingDirectory(QDir::homePath());
-    m_process->setProgram(m_binaryPath);
-    m_process->setArguments({QStringLiteral("serve"), QStringLiteral("--port"), QStringLiteral("4096")});
-
-    m_process->start();
+    performHttpHealthCheck();
 }
 
 void ProcessManager::stop()
@@ -193,13 +233,22 @@ void ProcessManager::stop()
 
     m_isShuttingDown = true;
     stopHealthCheck();
+
+    if (m_externalServer) {
+        setRunning(false);
+        setStatus(QStringLiteral("stopped"));
+        addLog(QStringLiteral("Disconnected from external server"));
+        resetRestartAttempts();
+        m_externalServer = false;
+        Q_EMIT serverStopped();
+        return;
+    }
+
     setStatus(QStringLiteral("stopping"));
     addLog(QStringLiteral("Stopping OpenCode server..."));
 
-    // Try graceful shutdown first (SIGTERM)
     m_process->terminate();
 
-    // Wait for graceful shutdown, then force kill if needed
     if (!m_process->waitForFinished(GRACEFUL_SHUTDOWN_TIMEOUT_MS)) {
         addLog(QStringLiteral("Server did not stop gracefully, forcing..."));
         m_process->kill();
@@ -211,6 +260,21 @@ void ProcessManager::stop()
     addLog(QStringLiteral("Server stopped"));
     resetRestartAttempts();
     Q_EMIT serverStopped();
+}
+
+void ProcessManager::launchProcess()
+{
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert(QStringLiteral("OPENCODE_SERVER_PASSWORD"), m_password);
+
+    m_process->setProcessEnvironment(env);
+    m_process->setWorkingDirectory(QDir::homePath());
+    m_process->setProgram(m_binaryPath);
+    m_process->setArguments({QStringLiteral("serve"),
+        QStringLiteral("--hostname"), m_host,
+        QStringLiteral("--port"), QString::number(m_port)});
+
+    m_process->start();
 }
 
 void ProcessManager::restart()
@@ -296,17 +360,16 @@ void ProcessManager::onProcessStarted()
 
 void ProcessManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitCode);
-
     stopHealthCheck();
     setRunning(false);
+    m_externalServer = false;
 
     QString exitReason;
     if (exitStatus == QProcess::CrashExit) {
-        exitReason = QStringLiteral("crashed");
+        exitReason = QStringLiteral("crashed (signal)");
         setStatus(QStringLiteral("crashed"));
     } else {
-        exitReason = QStringLiteral("exited");
+        exitReason = QStringLiteral("exited with code %1").arg(exitCode);
         setStatus(QStringLiteral("stopped"));
     }
 
@@ -314,9 +377,8 @@ void ProcessManager::onProcessFinished(int exitCode, QProcess::ExitStatus exitSt
 
     if (!m_isShuttingDown) {
         tryAutoRestart();
+        Q_EMIT serverStopped();
     }
-
-    Q_EMIT serverStopped();
 }
 
 void ProcessManager::onProcessError(QProcess::ProcessError error)
@@ -376,12 +438,129 @@ void ProcessManager::onHealthCheckTimeout()
         return;
     }
 
-    QProcess::ProcessState state = m_process->state();
-    if (state != QProcess::Running) {
-        addLog(QStringLiteral("Health check failed: process not running"));
+    performHttpHealthCheck();
+}
+
+void ProcessManager::onHealthCheckReply()
+{
+    QNetworkReply *reply = m_pendingHealthCheck;
+    m_pendingHealthCheck = nullptr;
+
+    if (!reply) return;
+
+    bool serverHealthy = false;
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray data = reply->readAll();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isNull() && doc.object().value(QStringLiteral("healthy")).toBool()) {
+            serverHealthy = true;
+        }
+    }
+
+    reply->deleteLater();
+
+    if (serverHealthy) {
+        if (m_status == QStringLiteral("starting")) {
+            m_externalServer = (m_process->state() != QProcess::Running);
+            setRunning(true);
+            setStatus(QStringLiteral("running"));
+            if (m_externalServer) {
+                addLog(QStringLiteral("Detected already-running OpenCode server at %1:%2").arg(m_host).arg(m_port));
+            } else {
+                addLog(QStringLiteral("Server is healthy"));
+            }
+            startHealthCheck();
+            Q_EMIT serverStarted();
+        }
+    } else {
+        if (m_status == QStringLiteral("starting")) {
+            addLog(QStringLiteral("No existing server found, launching new instance..."));
+            launchProcess();
+        } else if (m_running) {
+            if (m_externalServer) {
+                addLog(QStringLiteral("External server no longer responding"));
+                setRunning(false);
+                setStatus(QStringLiteral("stopped"));
+                m_externalServer = false;
+                stopHealthCheck();
+                Q_EMIT serverStopped();
+            } else {
+                addLog(QStringLiteral("Health check failed: server unresponsive"));
+                setRunning(false);
+                setStatus(QStringLiteral("crashed"));
+                tryAutoRestart();
+            }
+        }
+    }
+}
+
+void ProcessManager::performHttpHealthCheck()
+{
+    if (m_pendingHealthCheck) {
+        m_pendingHealthCheck->abort();
+        m_pendingHealthCheck->deleteLater();
+        m_pendingHealthCheck = nullptr;
+    }
+
+    QNetworkRequest request = buildHealthCheckRequest();
+    m_pendingHealthCheck = m_networkManager->get(request);
+
+    connect(m_pendingHealthCheck, &QNetworkReply::finished,
+            this, &ProcessManager::onHealthCheckReply);
+}
+
+QNetworkRequest ProcessManager::buildHealthCheckRequest() const
+{
+    QUrl url(QStringLiteral("http://%1:%2/global/health").arg(m_host).arg(m_port));
+    QNetworkRequest request(url);
+    request.setTransferTimeout(HEALTH_CHECK_HTTP_TIMEOUT_MS);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+
+    if (!m_password.isEmpty()) {
+        QString credentials = QStringLiteral("opencode:") + m_password;
+        QByteArray authHeader = "Basic " + credentials.toUtf8().toBase64();
+        request.setRawHeader("Authorization", authHeader);
+    }
+
+    return request;
+}
+
+void ProcessManager::cleanShutdown()
+{
+    m_isShuttingDown = true;
+    stopHealthCheck();
+
+    if (m_pendingHealthCheck) {
+        m_pendingHealthCheck->abort();
+        m_pendingHealthCheck->deleteLater();
+        m_pendingHealthCheck = nullptr;
+    }
+
+    if (m_externalServer) {
+        if (m_running) {
+            setRunning(false);
+        }
+        setStatus(QStringLiteral("stopped"));
+        m_externalServer = false;
+        Q_EMIT serverStopped();
+        return;
+    }
+
+    if (m_process->state() == QProcess::Running) {
+        m_process->terminate();
+        if (!m_process->waitForFinished(GRACEFUL_SHUTDOWN_TIMEOUT_MS)) {
+            m_process->kill();
+            m_process->waitForFinished(1000);
+        }
+    }
+
+    if (m_running) {
         setRunning(false);
-        setStatus(QStringLiteral("crashed"));
-        tryAutoRestart();
+        setStatus(QStringLiteral("stopped"));
+        Q_EMIT serverStopped();
+    } else if (m_status != QStringLiteral("stopped")) {
+        setStatus(QStringLiteral("stopped"));
     }
 }
 
@@ -394,6 +573,8 @@ void ProcessManager::loadSettings()
     m_password = settings.value(QStringLiteral("password")).toString();
     m_autoStart = settings.value(QStringLiteral("autoStart"), false).toBool();
     m_autoRestart = settings.value(QStringLiteral("autoRestart"), true).toBool();
+    m_host = settings.value(QStringLiteral("host"), QStringLiteral("127.0.0.1")).toString();
+    m_port = settings.value(QStringLiteral("port"), 4096).toInt();
 
     settings.endGroup();
 }
@@ -407,6 +588,8 @@ void ProcessManager::saveSettings()
     settings.setValue(QStringLiteral("password"), m_password);
     settings.setValue(QStringLiteral("autoStart"), m_autoStart);
     settings.setValue(QStringLiteral("autoRestart"), m_autoRestart);
+    settings.setValue(QStringLiteral("host"), m_host);
+    settings.setValue(QStringLiteral("port"), m_port);
 
     settings.endGroup();
     settings.sync();
@@ -425,6 +608,7 @@ void ProcessManager::addLog(const QString &log)
     }
 
     Q_EMIT logReceived(formattedLog);
+    Q_EMIT logsChanged();
 }
 
 void ProcessManager::setLastError(const QString &error)

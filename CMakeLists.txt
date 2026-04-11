@@ -25,6 +25,7 @@ find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     QuickControls2
     Widgets
     Sql
+    Network
 )
 
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
@@ -74,6 +75,7 @@ target_link_libraries(chatqt PRIVATE
     Qt6::QuickControls2
     Qt6::Widgets
     Qt6::Sql
+    Qt6::Network
     KF6::CoreAddons
     KF6::I18n
     KF6::Kirigami

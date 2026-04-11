@@ -20,7 +20,7 @@ QtObject {
     property string selectedOpenAICompatibleProviderId: _settings.value("selectedOpenAICompatibleProviderId", "")
     property string openclawInstances: _settings.value("openclawInstances", "[]")
     property string selectedOpenClawInstanceId: _settings.value("selectedOpenClawInstanceId", "")
-    property string opencodeUrl: _settings.value("opencodeUrl", "http://127.0.0.1:3000")
+    property string opencodeUrl: _settings.value("opencodeUrl", "http://127.0.0.1:4096")
     property string opencodeUsername: _settings.value("opencodeUsername", "")
     property string opencodePassword: _settings.value("opencodePassword", "")
     property string opencodeModel: _settings.value("opencodeModel", "")
@@ -194,6 +194,24 @@ QtObject {
     onSelectedOpenClawInstanceIdChanged: save()
 
     Component.onCompleted: {
+        if (typeof ProcessManager !== "undefined") {
+            opencodeUrl = ProcessManager.serverUrl
+            if (ProcessManager.password !== "") {
+                opencodeUsername = "opencode"
+                opencodePassword = ProcessManager.password
+            }
+
+            ProcessManager.serverUrlChanged.connect(function() {
+                opencodeUrl = ProcessManager.serverUrl
+            })
+            ProcessManager.passwordChanged.connect(function() {
+                if (ProcessManager.password !== "") {
+                    opencodeUsername = "opencode"
+                    opencodePassword = ProcessManager.password
+                }
+            })
+        }
+
         if (openclawInstances === "[]") {
             if (openclawUrl !== "http://127.0.0.1:18789" || openclawToken !== "") {
                 var migratedInstance = {

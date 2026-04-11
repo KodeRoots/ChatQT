@@ -14,6 +14,8 @@
 #include <QSettings>
 #include <QUuid>
 #include <QDir>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 
 class ProcessManager : public QObject
 {
@@ -27,6 +29,10 @@ class ProcessManager : public QObject
     Q_PROPERTY(bool autoStart READ autoStart WRITE setAutoStart NOTIFY autoStartChanged)
     Q_PROPERTY(bool autoRestart READ autoRestart WRITE setAutoRestart NOTIFY autoRestartChanged)
     Q_PROPERTY(int restartAttempts READ restartAttempts NOTIFY restartAttemptsChanged)
+    Q_PROPERTY(QString host READ host WRITE setHost NOTIFY hostChanged)
+    Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged)
+    Q_PROPERTY(QString serverUrl READ serverUrl NOTIFY serverUrlChanged)
+    Q_PROPERTY(QStringList logs READ logs NOTIFY logsChanged)
 
 public:
     static ProcessManager* instance();
@@ -53,6 +59,16 @@ public:
     Q_INVOKABLE bool isBinaryValid() const;
     Q_INVOKABLE bool validateBinaryPath(const QString &path) const;
 
+    QString host() const;
+    void setHost(const QString &host);
+    int port() const;
+    void setPort(int port);
+    QString serverUrl() const;
+    QStringList logs() const;
+
+public Q_SLOTS:
+    void cleanShutdown();
+
 Q_SIGNALS:
     void runningChanged(bool running);
     void statusChanged(const QString &status);
@@ -66,6 +82,10 @@ Q_SIGNALS:
     void serverStarted();
     void serverStopped();
     void errorOccurred(const QString &error);
+    void hostChanged(const QString &host);
+    void portChanged(int port);
+    void serverUrlChanged(const QString &url);
+    void logsChanged();
 
 private Q_SLOTS:
     void onProcessStarted();
@@ -74,6 +94,7 @@ private Q_SLOTS:
     void onReadyReadStandardOutput();
     void onReadyReadStandardError();
     void onHealthCheckTimeout();
+    void onHealthCheckReply();
 
 private:
     explicit ProcessManager(QObject *parent = nullptr);
@@ -90,12 +111,16 @@ private:
     void resetRestartAttempts();
     void startHealthCheck();
     void stopHealthCheck();
+    void launchProcess();
+    void performHttpHealthCheck();
+    QNetworkRequest buildHealthCheckRequest() const;
 
     static constexpr int MAX_LOG_LINES = 100;
     static constexpr int MAX_RESTART_ATTEMPTS = 3;
     static constexpr int HEALTH_CHECK_INTERVAL_MS = 5000;
     static constexpr int GRACEFUL_SHUTDOWN_TIMEOUT_MS = 5000;
     static constexpr int RESTART_BACKOFF_BASE_MS = 1000;
+    static constexpr int HEALTH_CHECK_HTTP_TIMEOUT_MS = 3000;
 
     QProcess *m_process;
     QTimer *m_healthCheckTimer;
@@ -109,6 +134,11 @@ private:
     bool m_autoRestart;
     int m_restartAttempts;
     bool m_isShuttingDown;
+    QString m_host;
+    int m_port;
+    QNetworkAccessManager *m_networkManager;
+    QNetworkReply *m_pendingHealthCheck;
+    bool m_externalServer;
 };
 
 #endif // PROCESSMANAGER_H
