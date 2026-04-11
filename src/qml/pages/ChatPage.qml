@@ -17,67 +17,18 @@ import "../logic/OpenCodeClient.js" as OpenCodeClient
 Kirigami.Page {
     id: root
 
-    titleDelegate: Component {
-        RowLayout {
-            spacing: Kirigami.Units.smallSpacing
-
-            Controls.ComboBox {
-                id: providerComboBox
-
-                Layout.fillWidth: true
-
-                flat: true
-                model: root.enabledProviderOptions
-                textRole: "text"
-                valueRole: "value"
-
-                currentIndex: {
-                    var currentValue = appSettings.provider
-                    if (currentValue === "openai-compatible" && appSettings.selectedOpenAICompatibleProviderId) {
-                        currentValue = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
-                    }
-                    if (currentValue === "openclaw" && appSettings.selectedOpenClawInstanceId) {
-                        currentValue = "openclaw:" + appSettings.selectedOpenClawInstanceId
-                    }
-
-                    for (let i = 0; i < root.enabledProviderOptions.length; i++) {
-                        if (root.enabledProviderOptions[i].value === currentValue) {
-                            return i;
-                        }
-                    }
-                    if (root.enabledProviderOptions.length > 0) {
-                        root.switchProvider(root.enabledProviderOptions[0].value)
-                    }
-                    return 0;
-                }
-
-                onActivated: function(index) {
-                    root.switchProvider(root.enabledProviderOptions[index].value);
-                }
-
-                enabled: !root.isLoading
-
-                Controls.ToolTip.text: i18n("Select AI provider")
-                Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                Controls.ToolTip.visible: hovered
-            }
-
-            Controls.Button {
-                id: settingsButton
-
-                text: i18n("Settings")
-                icon.name: "settings-configure"
-                // display: Controls.AbstractButton.IconOnly
-                flat: true
-
-                // Controls.ToolTip.text: i18n("Settings")
-                // Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
-                // Controls.ToolTip.visible: hovered
-
-                onClicked: root.openSettings()
-            }
+    actions: [
+        Kirigami.Action {
+            text: i18n("Settings")
+            icon.name: "settings-configure"
+            onTriggered: root.openSettings()
+        },
+        Kirigami.Action {
+            text: i18n("New chat")
+            icon.name: "list-add-symbolic"
+            onTriggered: root.clearChat()
         }
-    }
+    ]
 
     property string currentModel: ''
     property var listModelController: null
@@ -164,7 +115,7 @@ Kirigami.Page {
             var providerId = newProvider.substring("openai-compatible:".length)
             appSettings.selectedOpenAICompatibleProviderId = providerId
             appSettings.provider = "openai-compatible"
-            
+
             if (!appSettings.getSelectedOpenAICompatibleProvider()) {
                 var providers = appSettings.getOpenaiCompatibleProviders()
                 for (var i = 0; i < providers.length; i++) {
@@ -178,7 +129,7 @@ Kirigami.Page {
             var instanceId = newProvider.substring("openclaw:".length)
             appSettings.selectedOpenClawInstanceId = instanceId
             appSettings.provider = "openclaw"
-            
+
             if (!appSettings.getSelectedOpenClawInstance()) {
                 var instances = appSettings.getOpenClawInstances()
                 for (var i = 0; i < instances.length; i++) {
@@ -256,22 +207,22 @@ Kirigami.Page {
 
     function handleRequestComplete(oldLength, listModel) {
         if (activeXhr === null) return;
-        
+
         if (listModel.count > oldLength) {
             const lastValue = listModel.get(oldLength);
             promptArray.push({ "role": "assistant", "content": lastValue.content, "images": [] });
         }
         isLoading = false;
-        
+
         activeXhr = null;
         isStreaming = false;
     }
 
     function cancelRequest() {
         if (!isLoading) return "";
-        
+
         var wasStreamingBeforeAbort = isStreaming;
-        
+
         // Abort active request based on provider
         if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
             ApiClient.abortActiveRequest();
@@ -279,9 +230,9 @@ Kirigami.Page {
             OpenCodeClient.abortActiveRequest();
         }
         activeXhr = null;
-        
+
         var restoreText = "";
-        
+
         if (!wasStreamingBeforeAbort) {
             // No response received yet - remove the empty AI message and restore user's text
             if (listModelController.count > 0) {
@@ -290,7 +241,7 @@ Kirigami.Page {
             promptArray.pop();
             restoreText = lastSentMessage;
         }
-        
+
         isLoading = false;
         isStreaming = false;
         return restoreText;
@@ -298,7 +249,7 @@ Kirigami.Page {
 
     function stopRequest() {
         if (!isLoading) return;
-        
+
         // Abort active request
         if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
             ApiClient.abortActiveRequest();
@@ -306,7 +257,7 @@ Kirigami.Page {
             OpenCodeClient.abortActiveRequest();
         }
         activeXhr = null;
-        
+
         // Keep partial response in history
         if (listModelController.count > 0) {
             var lastIndex = listModelController.count - 1;
@@ -315,7 +266,7 @@ Kirigami.Page {
                 promptArray.push({ "role": "assistant", "content": lastItem.content, "images": [] });
             }
         }
-        
+
         isLoading = false;
         isStreaming = false;
     }
@@ -439,6 +390,65 @@ Kirigami.Page {
     ColumnLayout {
         anchors.fill: parent
         spacing: 0
+
+        ColumnLayout {
+            id: providerLayout
+            spacing: Kirigami.Units.smallSpacing
+            Layout.fillWidth: true
+
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.leftMargin: Kirigami.Units.smallSpacing
+                Layout.rightMargin: Kirigami.Units.smallSpacing
+                Layout.topMargin: Kirigami.Units.smallSpacing
+                // Layout.bottomMargin: Kirigami.Units.smallSpacing
+
+                Controls.ComboBox {
+                    id: providerComboBox
+
+                    Layout.fillWidth: true
+
+                    flat: true
+                    model: root.enabledProviderOptions
+                    textRole: "text"
+                    valueRole: "value"
+
+                    currentIndex: {
+                        var currentValue = appSettings.provider
+                        if (currentValue === "openai-compatible" && appSettings.selectedOpenAICompatibleProviderId) {
+                            currentValue = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
+                        }
+                        if (currentValue === "openclaw" && appSettings.selectedOpenClawInstanceId) {
+                            currentValue = "openclaw:" + appSettings.selectedOpenClawInstanceId
+                        }
+
+                        for (let i = 0; i < root.enabledProviderOptions.length; i++) {
+                            if (root.enabledProviderOptions[i].value === currentValue) {
+                                return i;
+                            }
+                        }
+                        if (root.enabledProviderOptions.length > 0) {
+                            root.switchProvider(root.enabledProviderOptions[0].value)
+                        }
+                        return 0;
+                    }
+
+                    onActivated: function(index) {
+                        root.switchProvider(root.enabledProviderOptions[index].value);
+                    }
+
+                    enabled: !root.isLoading
+
+                    Controls.ToolTip.text: i18n("Select AI provider")
+                    Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                    Controls.ToolTip.visible: hovered
+                }
+            }
+
+            Kirigami.Separator {
+                Layout.fillWidth: true
+            }
+        }
 
         // OpenCode server status warning
         Kirigami.InlineMessage {
