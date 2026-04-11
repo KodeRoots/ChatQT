@@ -37,6 +37,7 @@ ProcessManager::ProcessManager(QObject *parent)
     , m_networkManager(new QNetworkAccessManager(this))
     , m_pendingHealthCheck(nullptr)
     , m_externalServer(false)
+    , m_launchOnCheckFail(false)
 {
     loadSettings();
 
@@ -60,12 +61,12 @@ ProcessManager::ProcessManager(QObject *parent)
 
     setStatus(QStringLiteral("stopped"));
 
-    // Auto-start server if enabled
-    if (m_autoStart && isBinaryValid()) {
-        QTimer::singleShot(500, this, [this]() {
-            start();
-        });
-    }
+    QTimer::singleShot(500, this, [this]() {
+        m_launchOnCheckFail = false;
+        setStatus(QStringLiteral("starting"));
+        addLog(QStringLiteral("Checking for existing OpenCode server at %1:%2...").arg(m_host).arg(m_port));
+        performHttpHealthCheck();
+    });
 }
 
 ProcessManager::~ProcessManager()
@@ -217,6 +218,7 @@ void ProcessManager::start()
     }
 
     m_isShuttingDown = false;
+    m_launchOnCheckFail = true;
     setStatus(QStringLiteral("starting"));
     addLog(QStringLiteral("Starting OpenCode server..."));
     addLog(QStringLiteral("Checking if server is already running at %1:%2...").arg(m_host).arg(m_port));
@@ -475,8 +477,14 @@ void ProcessManager::onHealthCheckReply()
         }
     } else {
         if (m_status == QStringLiteral("starting")) {
-            addLog(QStringLiteral("No existing server found, launching new instance..."));
-            launchProcess();
+            if (m_launchOnCheckFail) {
+                addLog(QStringLiteral("No existing server found, launching new instance..."));
+                m_launchOnCheckFail = false;
+                launchProcess();
+            } else {
+                setStatus(QStringLiteral("stopped"));
+                addLog(QStringLiteral("No existing server found"));
+            }
         } else if (m_running) {
             if (m_externalServer) {
                 addLog(QStringLiteral("External server no longer responding"));

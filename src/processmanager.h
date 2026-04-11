@@ -139,6 +139,7 @@ private:
     QNetworkAccessManager *m_networkManager;
     QNetworkReply *m_pendingHealthCheck;
     bool m_externalServer;
+    bool m_launchOnCheckFail;
 };
 
 #endif // PROCESSMANAGER_H
