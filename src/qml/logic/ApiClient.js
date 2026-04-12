@@ -228,6 +228,93 @@ function preprocessMarkdown(text) {
         .replace(/___([^_]+)___/g, '*$1*');
 }
 
+function testConnection(providerType, baseUrl, token, model, extraHeaders, includeV1, onSuccess, onError) {
+    var cleanUrl = baseUrl.replace(/\/$/, '');
+
+    if (providerType === "ollama") {
+        var url = cleanUrl + "/api/tags";
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    try {
+                        var response = JSON.parse(xhr.responseText);
+                        var modelCount = response.models ? response.models.length : 0;
+                        if (typeof onSuccess === "function") {
+                            onSuccess({ modelCount: modelCount });
+                        }
+                    } catch (e) {
+                        if (typeof onSuccess === "function") {
+                            onSuccess({ modelCount: 0 });
+                        }
+                    }
+                } else {
+                    if (typeof onError === "function") {
+                        var statusText = xhr.statusText || "UNKNOWN";
+                        if (xhr.status === 0) statusText = "NETWORK_ERROR";
+                        else if (xhr.status === 401) statusText = "UNAUTHORIZED";
+                        else if (xhr.status === 404) statusText = "NOT_FOUND";
+                        onError({ status: xhr.status, statusText: statusText });
+                    }
+                }
+            }
+        };
+
+        xhr.send();
+        return xhr;
+    }
+
+    var url = cleanUrl;
+    if (includeV1 && !cleanUrl.endsWith("/v1")) {
+        url = cleanUrl + "/v1";
+    }
+    url += "/chat/completions";
+
+    var data = JSON.stringify({
+        "model": model,
+        "messages": [{"role": "user", "content": "hi"}],
+        "max_tokens": 1
+    });
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    if (token) {
+        xhr.setRequestHeader("Authorization", "Bearer " + token);
+    }
+
+    if (extraHeaders) {
+        var keys = Object.keys(extraHeaders);
+        for (var i = 0; i < keys.length; i++) {
+            xhr.setRequestHeader(keys[i], extraHeaders[i]);
+        }
+    }
+
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (xhr.status === 200) {
+                if (typeof onSuccess === "function") {
+                    onSuccess({ modelCount: 0 });
+                }
+            } else {
+                if (typeof onError === "function") {
+                    var statusText = xhr.statusText || "UNKNOWN";
+                    if (xhr.status === 0) statusText = "NETWORK_ERROR";
+                    else if (xhr.status === 401) statusText = "UNAUTHORIZED";
+                    else if (xhr.status === 404) statusText = "NOT_FOUND";
+                    onError({ status: xhr.status, statusText: statusText });
+                }
+            }
+        }
+    };
+
+    xhr.send(data);
+    return xhr;
+}
+
 function parseTextToComboBox(text) {
     return text
         .replace(/-/g, ' ')
