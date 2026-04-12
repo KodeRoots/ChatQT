@@ -169,6 +169,8 @@ Kirigami.ScrollablePage {
         Kirigami.Dialog {
             id: editSheet
             title: i18nc("@title:window", "Edit Instance")
+            padding: Kirigami.Units.largeSpacing
+            width: Kirigami.Units.gridUnit * 32
 
             property int editingIndex: -1
 
@@ -286,25 +288,42 @@ Kirigami.ScrollablePage {
                 }
             }
 
-            Kirigami.FormLayout {
+            ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "Display Name:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: displayNameField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "Display Name:")
                     Layout.fillWidth: true
                     placeholderText: i18nc("@info:placeholder", "e.g., Local OpenClaw, Remote Server")
                 }
 
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "URL:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: urlField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "URL:")
                     Layout.fillWidth: true
                     placeholderText: "http://127.0.0.1:18789"
                     onTextChanged: editSheet.resetTestState()
                 }
 
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "Token:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: tokenField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "Token:")
                     Layout.fillWidth: true
                     placeholderText: i18nc("@info:placeholder", "Enter your token")
                     echoMode: QQC2.TextField.Password

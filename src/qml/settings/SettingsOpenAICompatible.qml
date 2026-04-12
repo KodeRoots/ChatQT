@@ -172,13 +172,10 @@ Kirigami.ScrollablePage {
         Kirigami.Dialog {
             id: editSheet
             title: i18nc("@title:window", "Edit Provider")
+            padding: Kirigami.Units.largeSpacing
+            width: Kirigami.Units.gridUnit * 28
 
             property int editingIndex: -1
-
-            leftPadding: Kirigami.Units.largeSpacing
-            rightPadding: Kirigami.Units.largeSpacing
-            topPadding: Kirigami.Units.largeSpacing
-            bottomPadding: Kirigami.Units.largeSpacing
 
             function openNewProvider() {
                 editingIndex = -1
@@ -303,34 +300,56 @@ Kirigami.ScrollablePage {
                 }
             }
 
-            Kirigami.FormLayout {
+            ColumnLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "Display Name:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: displayNameField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "Display Name:")
                     Layout.fillWidth: true
                     placeholderText: i18nc("@info:placeholder", "e.g., DeepSeek, Groq, OpenAI")
                 }
 
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "API URL:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: urlField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "API URL:")
                     Layout.fillWidth: true
                     placeholderText: "https://api.openai.com/v1"
                     onTextChanged: editSheet.resetTestState()
                 }
 
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "API Token:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: tokenField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "API Token:")
                     Layout.fillWidth: true
                     placeholderText: i18nc("@info:placeholder", "Enter your API token")
                     echoMode: QQC2.TextField.Password
                     onTextChanged: editSheet.resetTestState()
                 }
 
+                QQC2.Label {
+                    text: i18nc("@label:textbox", "Model:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
                 QQC2.TextField {
                     id: modelField
-                    Kirigami.FormData.label: i18nc("@label:textbox", "Model:")
                     Layout.fillWidth: true
                     placeholderText: "gpt-4"
                     onTextChanged: editSheet.resetTestState()
