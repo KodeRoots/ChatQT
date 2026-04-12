@@ -19,6 +19,14 @@ Kirigami.Page {
 
     actions: [
         Kirigami.Action {
+            id: thinkingAction
+            text: i18n("Thinking")
+            icon.name: root.thinkingEnabled ? "flash" : "flash-off"
+            checkable: true
+            checked: root.thinkingEnabled
+            onToggled: root.toggleThinking()
+        },
+        Kirigami.Action {
             text: i18n("Settings")
             icon.name: "settings-configure"
             onTriggered: root.openSettings()
@@ -38,16 +46,7 @@ Kirigami.Page {
     property bool hasLocalModel: false
     property bool disableAutoScroll: false
     property string currentProvider: appSettings.provider
-    property bool thinkingEnabled: {
-        if (currentProvider === "ollama") {
-            return !appSettings.ollamaDisableThinking
-        }
-        var provider = appSettings.getSelectedOpenAICompatibleProvider()
-        if (provider) {
-            return !appSettings.openaiCompatibleDisableThinking
-        }
-        return !appSettings.openaiCompatibleDisableThinking
-    }
+    property bool thinkingEnabled: true
     property bool isStreaming: false
     property string lastSentMessage: ""
     property var activeXhr: null
@@ -153,6 +152,30 @@ Kirigami.Page {
         }
 
         applicationWindow().showPassiveNotification(i18n("Switched to %1", appSettings.getProviderDisplayName()));
+        syncThinkingEnabled();
+    }
+
+    function syncThinkingEnabled() {
+        if (currentProvider === "ollama") {
+            thinkingEnabled = !appSettings.ollamaDisableThinking;
+        } else if (currentProvider.startsWith("openai-compatible")) {
+            thinkingEnabled = !appSettings.openaiCompatibleDisableThinking;
+        } else {
+            thinkingEnabled = true;
+        }
+    }
+
+    function toggleThinking() {
+        thinkingEnabled = !thinkingEnabled;
+
+        if (currentProvider === "ollama") {
+            appSettings.ollamaDisableThinking = !thinkingEnabled;
+        } else if (currentProvider.startsWith("openai-compatible")) {
+            appSettings.openaiCompatibleDisableThinking = !thinkingEnabled;
+        }
+
+        var status = thinkingEnabled ? i18n("enabled") : i18n("disabled");
+        applicationWindow().showPassiveNotification(i18n("Thinking %1", status));
     }
 
     function isProviderConfigured() {
@@ -387,6 +410,7 @@ Kirigami.Page {
         if (currentProvider === "ollama") {
             getModels();
         }
+        syncThinkingEnabled();
         messageInput.focusInput();
     }
 
