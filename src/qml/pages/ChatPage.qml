@@ -152,28 +152,10 @@ Kirigami.Page {
         }
 
         applicationWindow().showPassiveNotification(i18n("Switched to %1", appSettings.getProviderDisplayName()));
-        syncThinkingEnabled();
-    }
-
-    function syncThinkingEnabled() {
-        if (currentProvider === "ollama") {
-            thinkingEnabled = !appSettings.ollamaDisableThinking;
-        } else if (currentProvider.startsWith("openai-compatible")) {
-            thinkingEnabled = !appSettings.openaiCompatibleDisableThinking;
-        } else {
-            thinkingEnabled = true;
-        }
     }
 
     function toggleThinking() {
         thinkingEnabled = !thinkingEnabled;
-
-        if (currentProvider === "ollama") {
-            appSettings.ollamaDisableThinking = !thinkingEnabled;
-        } else if (currentProvider.startsWith("openai-compatible")) {
-            appSettings.openaiCompatibleDisableThinking = !thinkingEnabled;
-        }
-
         var status = thinkingEnabled ? i18n("enabled") : i18n("disabled");
         applicationWindow().showPassiveNotification(i18n("Thinking %1", status));
     }
@@ -330,7 +312,7 @@ Kirigami.Page {
                     instance.token,
                     "openclaw",
                     promptArray,
-                    true,
+                    thinkingEnabled,
                     { "x-openclaw-agent-id": "main" },
                     true,
                     listModel,
@@ -410,7 +392,6 @@ Kirigami.Page {
         if (currentProvider === "ollama") {
             getModels();
         }
-        syncThinkingEnabled();
         messageInput.focusInput();
     }
 
