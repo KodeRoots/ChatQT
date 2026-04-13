@@ -54,9 +54,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
 
     // Register SessionStore as singleton
-    auto *sessionStore = SessionStore::instance();
-    qDebug() << "SessionStore instance created, db path:" << sessionStore->property("currentSessionId").toString();
-    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", sessionStore);
+    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", SessionStore::instance());
 
     QObject::connect(&app, &QApplication::aboutToQuit,
                      ProcessManager::instance(), &ProcessManager::cleanShutdown);

@@ -339,6 +339,23 @@ Kirigami.Page {
 
         SessionStore.addMessage(currentSessionId, "user", prompt, "")
 
+        var currentProviderName = currentProvider
+        var currentModelName = currentModel || ""
+        if (currentProvider.startsWith("openclaw")) {
+            var instance = appSettings.getSelectedOpenClawInstance()
+            if (instance) {
+                currentProviderName = "openclaw:" + instance.id
+                currentModelName = instance.displayName || "openclaw"
+            }
+        } else if (currentProvider.startsWith("openai-compatible:")) {
+            var provider = appSettings.getSelectedOpenAICompatibleProvider()
+            if (provider) {
+                currentProviderName = "openai-compatible:" + provider.id
+                currentModelName = provider.model || "unknown"
+            }
+        }
+        SessionStore.updateSessionProvider(currentSessionId, currentProviderName, currentModelName)
+
         listModel.append({
             "name": "User",
             "content": prompt,

@@ -22,8 +22,6 @@ SessionStore::SessionStore(QObject *parent)
 {
     if (!initDatabase()) {
         qWarning() << "SessionStore: Failed to initialize database";
-    } else {
-        qDebug() << "SessionStore: Database initialized successfully at" << m_dbPath;
     }
 }
 
@@ -253,6 +251,22 @@ bool SessionStore::updateSessionTitle(const QString &sessionId, const QString &t
     QSqlQuery query(m_db);
     query.prepare(QStringLiteral("UPDATE sessions SET title = ? WHERE id = ?"));
     query.addBindValue(title);
+    query.addBindValue(sessionId);
+
+    if (!executeQuery(query)) {
+        return false;
+    }
+
+    Q_EMIT sessionUpdated(sessionId);
+    return true;
+}
+
+bool SessionStore::updateSessionProvider(const QString &sessionId, const QString &provider, const QString &model)
+{
+    QSqlQuery query(m_db);
+    query.prepare(QStringLiteral("UPDATE sessions SET provider = ?, model = ? WHERE id = ?"));
+    query.addBindValue(provider);
+    query.addBindValue(model);
     query.addBindValue(sessionId);
 
     if (!executeQuery(query)) {
