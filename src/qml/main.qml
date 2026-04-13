@@ -13,11 +13,11 @@ import "pages"
 Kirigami.ApplicationWindow {
     id: root
 
-    width: Kirigami.Units.gridUnit * 40
-    height: Kirigami.Units.gridUnit * 50
+    width: Kirigami.Units.gridUnit * 48
+    height: Kirigami.Units.gridUnit * 40
 
-    minimumWidth: Kirigami.Units.gridUnit * 20
-    minimumHeight: Kirigami.Units.gridUnit * 30
+    minimumWidth: Kirigami.Units.gridUnit * 48
+    minimumHeight: Kirigami.Units.gridUnit * 40
 
     globalDrawer: Kirigami.GlobalDrawer {
         title: i18n("ChatQT")

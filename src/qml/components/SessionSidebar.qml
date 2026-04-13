@@ -25,10 +25,10 @@ ColumnLayout {
         level: 2
         text: i18n("Sessions")
         Layout.fillWidth: true
-        Layout.topMargin: Kirigami.Units.largeSpacing
-        Layout.leftMargin: Kirigami.Units.largeSpacing
-        Layout.rightMargin: Kirigami.Units.largeSpacing
-        Layout.bottomMargin: Kirigami.Units.smallSpacing
+        Layout.preferredHeight: providerComboBoxRow.height
+        Layout.topMargin: Kirigami.Units.smallSpacing * 2
+        Layout.leftMargin: Kirigami.Units.smallSpacing
+        Layout.rightMargin: Kirigami.Units.smallSpacing
     }
 
     Kirigami.Separator {

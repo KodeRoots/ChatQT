@@ -429,7 +429,9 @@ Kirigami.Page {
 
         SessionSidebar {
             id: sessionSidebar
-            Layout.preferredWidth: Kirigami.Units.gridUnit * 14
+            Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+            Layout.minimumWidth: Kirigami.Units.gridUnit * 16
+            Layout.maximumWidth: Kirigami.Units.gridUnit * 16
             Layout.fillHeight: true
             sessionModel: sessionModel
             activeSessionIndex: root.activeSessionIndex
@@ -458,11 +460,13 @@ Kirigami.Page {
         spacing: 0
 
         RowLayout {
+            id: providerComboBoxRow
             spacing: Kirigami.Units.smallSpacing
             Layout.fillWidth: true
             Layout.leftMargin: Kirigami.Units.smallSpacing
             Layout.rightMargin: Kirigami.Units.smallSpacing
             Layout.topMargin: Kirigami.Units.smallSpacing
+            Layout.bottomMargin: Kirigami.Units.smallSpacing
 
             Controls.ComboBox {
                 id: providerComboBox
