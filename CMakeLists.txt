@@ -46,6 +46,7 @@ ecm_setup_version(${PROJECT_VERSION}
 qt_add_executable(chatqt 
     src/main.cpp
     src/processmanager.cpp
+    src/hotreload.cpp
 )
 
 qt_add_qml_module(chatqt

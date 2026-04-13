@@ -11,6 +11,7 @@
 #include <QIcon>
 #include <QUrl>
 #include <QQmlEngine>
+#include <QQuickWindow>
 
 #include <KAboutData>
 #include <KLocalizedContext>
@@ -19,6 +20,7 @@
 
 #include "chatqt_version.h"
 #include "processmanager.h"
+#include "hotreload.h"
 
 int main(int argc, char *argv[])
 {
@@ -59,7 +61,16 @@ int main(int argc, char *argv[])
         }
     });
 
-    const QUrl url(QStringLiteral("qrc:/org/koderoots/chatqt/src/qml/main.qml"));
+    QString qmlSourceDir = qEnvironmentVariable("QML_SRC_DIR");
+    QUrl url;
+    if (!qmlSourceDir.isEmpty()) {
+        QString path = qmlSourceDir + QStringLiteral("/src/qml/main.qml");
+        url = QUrl::fromLocalFile(path);
+        engine.addImportPath(qmlSourceDir);
+    } else {
+        url = QUrl(QStringLiteral("qrc:/org/koderoots/chatqt/src/qml/main.qml"));
+    }
+
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
         if (!obj && url == objUrl) {
@@ -70,6 +81,14 @@ int main(int argc, char *argv[])
 
     if (engine.rootObjects().isEmpty()) {
         return -1;
+    }
+
+    if (!qmlSourceDir.isEmpty()) {
+        auto *hotReload = new HotReload(&engine, url, &app);
+        auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        if (window) {
+            hotReload->setWindow(window);
+        }
     }
 
     return app.exec();
