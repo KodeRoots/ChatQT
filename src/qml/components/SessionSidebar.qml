@@ -53,7 +53,7 @@ ColumnLayout {
         }
 
         delegate: SessionCard {
-            width: sessionListView.width - Kirigami.Units.smallSpacing * 2
+            width: sessionListView.width
             sessionTitle: model.title
             sessionProvider: model.provider
             sessionTimestamp: model.timestamp
