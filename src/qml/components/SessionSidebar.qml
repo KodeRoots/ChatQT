@@ -25,7 +25,7 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         Layout.preferredHeight: Kirigami.Units.gridUnit * 2
-        Layout.topMargin: Kirigami.Units.smallSpacing * 2
+        Layout.topMargin: Kirigami.Units.smallSpacing
         Layout.leftMargin: Kirigami.Units.smallSpacing
         Layout.rightMargin: Kirigami.Units.smallSpacing
 
@@ -34,18 +34,6 @@ ColumnLayout {
             text: i18n("Sessions")
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignVCenter
-        }
-
-        QQC2.Button {
-            icon.name: "list-add-symbolic"
-            display: QQC2.AbstractButton.IconOnly
-            Layout.alignment: Qt.AlignVCenter
-
-            QQC2.ToolTip.text: i18n("New Chat")
-            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
-            QQC2.ToolTip.visible: hovered
-
-            onClicked: root.newChatClicked()
         }
     }
 
