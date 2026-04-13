@@ -26,13 +26,11 @@ Kirigami.AbstractCard {
         color: root.isActive
             ? Kirigami.Theme.highlightColor
             : Kirigami.Theme.backgroundColor
-        border.color: root.isActive
-            ? Kirigami.Theme.highlightColor
-            : Kirigami.ColorUtils.tintWithAlpha(
-                Kirigami.Theme.textColor,
-                Kirigami.Theme.backgroundColor,
-                0.8
-              )
+        border.color: Kirigami.ColorUtils.tintWithAlpha(
+            Kirigami.Theme.textColor,
+            Kirigami.Theme.backgroundColor,
+            0.8
+        )
         border.width: 1
     }
 
