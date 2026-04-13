@@ -49,7 +49,16 @@ ColumnLayout {
             anchors.centerIn: parent
             width: parent.width - (Kirigami.Units.largeSpacing * 4)
             visible: sessionListView.count === 0
-            text: i18n("No sessions yet")
+
+            icon {
+                name: "view-history-symbolic"
+                source: ""
+                color: Kirigami.Theme.disabledTextColor
+            }
+
+            text: i18n("Your chat sessions will appear here")
+
+            explanation: i18n("Start a new conversation to see it listed in this sidebar.")
         }
 
         delegate: SessionCard {
