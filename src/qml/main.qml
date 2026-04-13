@@ -26,12 +26,6 @@ Kirigami.ApplicationWindow {
 
         actions: [
             Kirigami.Action {
-                text: i18n("Clear chat")
-                icon.name: "edit-clear-history"
-                enabled: chatPage.isProviderConfigured() && !chatPage.isLoading
-                onTriggered: chatPage.clearChat()
-            },
-            Kirigami.Action {
                 text: i18n("Disable auto scroll")
                 icon.name: "transform-move-vertical"
                 checkable: true
