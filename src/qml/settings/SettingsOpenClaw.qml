@@ -112,10 +112,19 @@ Kirigami.ScrollablePage {
         saveInstances()
     }
 
-    ColumnLayout {
+        ColumnLayout {
         anchors.fill: parent
         anchors.margins: Kirigami.Units.largeSpacing
         spacing: Kirigami.Units.largeSpacing
+
+        Kirigami.InlineMessage {
+            id: openaiCompatMessage
+            Layout.fillWidth: true
+            type: Kirigami.MessageType.Warning
+            visible: true
+            showCloseButton: true
+            text: i18nc("@info", "To use OpenClaw with ChatQT, you must enable the OpenAI-compatible Chat Completions endpoint in OpenClaw.\nThe easiest way to do this is asking OpenClaw to do so.")
+        }
 
         QQC2.Label {
             text: i18nc("@info", "Configure multiple OpenClaw instances. Add, edit, or remove instances using the buttons below.")
