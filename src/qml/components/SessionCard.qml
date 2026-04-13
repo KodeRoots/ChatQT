@@ -16,7 +16,6 @@ Kirigami.AbstractCard {
     property string sessionTimestamp: ""
     property bool isActive: false
 
-    signal clicked
     signal deleteClicked
 
     showClickFeedback: true
@@ -57,7 +56,7 @@ Kirigami.AbstractCard {
                 icon.name: "delete-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18nc("@action:button", "Delete")
-                visible: mouseArea.containsMouse || root.isActive
+                visible: hoverHandler.hovered || root.isActive
                 opacity: visible ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: Kirigami.Units.shortDuration } }
 
@@ -90,11 +89,8 @@ Kirigami.AbstractCard {
         }
     }
 
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
+    HoverHandler {
+        id: hoverHandler
         cursorShape: Qt.PointingHandCursor
-        onClicked: root.clicked()
     }
 }
