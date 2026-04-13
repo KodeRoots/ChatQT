@@ -326,7 +326,7 @@ Kirigami.Page {
                 var provider = appSettings.getSelectedOpenAICompatibleProvider()
                 if (provider) {
                     providerName = "openai-compatible:" + provider.id
-                    modelName = provider.model || "unknown"
+                    modelName = provider.displayName || provider.model || "unknown"
                 }
             }
             currentSessionId = SessionStore.createSession(providerName, modelName)
@@ -349,7 +349,7 @@ Kirigami.Page {
             var provider = appSettings.getSelectedOpenAICompatibleProvider()
             if (provider) {
                 currentProviderName = "openai-compatible:" + provider.id
-                currentModelName = provider.model || "unknown"
+                currentModelName = provider.displayName || provider.model || "unknown"
             }
         }
         SessionStore.updateSessionProvider(currentSessionId, currentProviderName, currentModelName)
@@ -466,13 +466,13 @@ Kirigami.Page {
         if (provider === "ollama") {
             return "Ollama · " + (model || "unknown");
         } else if (provider.startsWith("openclaw:")) {
-            return "OpenClaw · " + (model || "unknown");
+            return model || "OpenClaw";
         } else if (provider.startsWith("openai-compatible:")) {
-            return (model || "OpenAI Compatible");
+            return model || "OpenAI Compatible";
         } else if (provider === "opencode") {
-            return "OpenCode · " + (model || "unknown");
+            return "OpenCode";
         }
-        return provider + " · " + (model || "");
+        return provider;
     }
 
     function loadSessionById(sessionId) {
