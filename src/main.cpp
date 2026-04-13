@@ -20,6 +20,7 @@
 
 #include "chatqt_version.h"
 #include "processmanager.h"
+#include "sessionstore.h"
 #include "hotreload.h"
 
 int main(int argc, char *argv[])
@@ -51,6 +52,11 @@ int main(int argc, char *argv[])
 
     // Register ProcessManager as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
+
+    // Register SessionStore as singleton
+    auto *sessionStore = SessionStore::instance();
+    qDebug() << "SessionStore instance created, db path:" << sessionStore->property("currentSessionId").toString();
+    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", sessionStore);
 
     QObject::connect(&app, &QApplication::aboutToQuit,
                      ProcessManager::instance(), &ProcessManager::cleanShutdown);

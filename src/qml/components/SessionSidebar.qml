@@ -14,21 +14,39 @@ ColumnLayout {
     id: root
 
     property alias sessionModel: sessionListView.model
-    property int activeSessionIndex: -1
+    property string currentSessionId: ""
 
-    signal sessionClicked(int index)
-    signal sessionDeleteClicked(int index)
+    signal sessionClicked(string sessionId)
+    signal sessionDeleteClicked(string sessionId)
+    signal newChatClicked()
 
     spacing: 0
 
-    Kirigami.Heading {
-        level: 2
-        text: i18n("Sessions")
+    RowLayout {
         Layout.fillWidth: true
-        Layout.preferredHeight: providerComboBoxRow.height
+        Layout.preferredHeight: Kirigami.Units.gridUnit * 2
         Layout.topMargin: Kirigami.Units.smallSpacing * 2
         Layout.leftMargin: Kirigami.Units.smallSpacing
         Layout.rightMargin: Kirigami.Units.smallSpacing
+
+        Kirigami.Heading {
+            level: 2
+            text: i18n("Sessions")
+            Layout.fillWidth: true
+            Layout.alignment: Qt.AlignVCenter
+        }
+
+        QQC2.Button {
+            icon.name: "list-add-symbolic"
+            display: QQC2.AbstractButton.IconOnly
+            Layout.alignment: Qt.AlignVCenter
+
+            QQC2.ToolTip.text: i18n("New Chat")
+            QQC2.ToolTip.delay: Kirigami.Units.toolTipDelay
+            QQC2.ToolTip.visible: hovered
+
+            onClicked: root.newChatClicked()
+        }
     }
 
     Kirigami.Separator {
@@ -63,13 +81,14 @@ ColumnLayout {
 
         delegate: SessionCard {
             width: sessionListView.width
+            sessionId: model.sessionId
             sessionTitle: model.title
             sessionProvider: model.provider
             sessionTimestamp: model.timestamp
-            isActive: model.index === root.activeSessionIndex
+            isActive: model.sessionId === root.currentSessionId
 
-            onClicked: root.sessionClicked(model.index)
-            onDeleteClicked: root.sessionDeleteClicked(model.index)
+            onClicked: root.sessionClicked(model.sessionId)
+            onDeleteClicked: root.sessionDeleteClicked(model.sessionId)
         }
 
         QQC2.ScrollBar.vertical: QQC2.ScrollBar {}

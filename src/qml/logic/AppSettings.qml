@@ -24,6 +24,7 @@ QtObject {
     property string opencodeUsername: _settings.value("opencodeUsername", "")
     property string opencodePassword: _settings.value("opencodePassword", "")
     property string opencodeModel: _settings.value("opencodeModel", "")
+    property string lastActiveSessionId: _settings.value("lastActiveSessionId", "")
 
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
@@ -165,6 +166,7 @@ QtObject {
         _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
         _settings.setValue("openclawInstances", openclawInstances)
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
+        _settings.setValue("lastActiveSessionId", lastActiveSessionId)
         _settings.sync()
     }
 
@@ -190,6 +192,7 @@ QtObject {
     onSelectedOpenAICompatibleProviderIdChanged: save()
     onOpenclawInstancesChanged: save()
     onSelectedOpenClawInstanceIdChanged: save()
+    onLastActiveSessionIdChanged: save()
 
     Component.onCompleted: {
         if (typeof ProcessManager !== "undefined") {

@@ -34,7 +34,10 @@ Kirigami.Page {
         Kirigami.Action {
             text: i18n("New chat")
             icon.name: "list-add-symbolic"
-            onTriggered: root.clearChat()
+            onTriggered: {
+                root.clearChat()
+                root.refreshSessionList()
+            }
         }
     ]
 
@@ -50,7 +53,7 @@ Kirigami.Page {
     property bool isStreaming: false
     property string lastSentMessage: ""
     property var activeXhr: null
-    property int activeSessionIndex: 0
+    property string currentSessionId: ""
 
     function buildProviderOptions() {
         var options = [
@@ -211,6 +214,10 @@ Kirigami.Page {
                 listModel.setProperty(oldLength, "thinkingContent", thinkingText);
             }
         }
+
+        if (currentSessionId !== "" && !streamingSaveTimer.running) {
+            streamingSaveTimer.start();
+        }
     }
 
     function handleRequestComplete(oldLength, listModel) {
@@ -224,6 +231,12 @@ Kirigami.Page {
 
         activeXhr = null;
         isStreaming = false;
+
+        if (currentSessionId !== "" && listModel.count > oldLength) {
+            var lastMsg = listModel.get(oldLength);
+            SessionStore.finalizeLastAssistantMessage(currentSessionId, lastMsg.content, lastMsg.thinkingContent || "");
+            refreshSessionList();
+        }
     }
 
     function cancelRequest() {
@@ -248,6 +261,19 @@ Kirigami.Page {
             }
             promptArray.pop();
             restoreText = lastSentMessage;
+
+            if (currentSessionId !== "") {
+                SessionStore.addMessage(currentSessionId, "assistant", "", "");
+                refreshSessionList();
+            }
+        } else {
+            if (currentSessionId !== "" && listModelController.count > 0) {
+                var lastItem = listModelController.get(listModelController.count - 1);
+                if (lastItem && lastItem.name === "Assistant") {
+                    SessionStore.finalizeLastAssistantMessage(currentSessionId, lastItem.content, lastItem.thinkingContent || "");
+                    refreshSessionList();
+                }
+            }
         }
 
         isLoading = false;
@@ -272,6 +298,10 @@ Kirigami.Page {
             var lastItem = listModelController.get(lastIndex);
             if (lastItem && lastItem.name === "Assistant") {
                 promptArray.push({ "role": "assistant", "content": lastItem.content, "images": [] });
+                if (currentSessionId !== "") {
+                    SessionStore.finalizeLastAssistantMessage(currentSessionId, lastItem.content, lastItem.thinkingContent || "");
+                    refreshSessionList();
+                }
             }
         }
 
@@ -284,6 +314,30 @@ Kirigami.Page {
 
         lastSentMessage = prompt;
         isStreaming = false;
+
+        if (currentSessionId === "") {
+            var providerName = currentProvider
+            var modelName = currentModel || ""
+            if (currentProvider.startsWith("openclaw")) {
+                var instance = appSettings.getSelectedOpenClawInstance()
+                if (instance) {
+                    providerName = "openclaw:" + instance.id
+                    modelName = instance.displayName || "openclaw"
+                }
+            } else if (currentProvider.startsWith("openai-compatible:")) {
+                var provider = appSettings.getSelectedOpenAICompatibleProvider()
+                if (provider) {
+                    providerName = "openai-compatible:" + provider.id
+                    modelName = provider.model || "unknown"
+                }
+            }
+            currentSessionId = SessionStore.createSession(providerName, modelName)
+            var title = prompt.length > 50 ? prompt.substring(0, 50) + "…" : prompt
+            SessionStore.updateSessionTitle(currentSessionId, title)
+            refreshSessionList()
+        }
+
+        SessionStore.addMessage(currentSessionId, "user", prompt, "")
 
         listModel.append({
             "name": "User",
@@ -372,7 +426,68 @@ Kirigami.Page {
     function clearChat() {
         listModelController.clear();
         promptArray = [];
+        currentSessionId = "";
+        appSettings.lastActiveSessionId = "";
         OpenCodeClient.resetSession();
+    }
+
+    function refreshSessionList() {
+        sessionModel.clear();
+        var sessions = SessionStore.listSessions();
+        for (var i = 0; i < sessions.length; i++) {
+            var s = sessions[i];
+            var providerDisplay = getProviderLabel(s.provider, s.model)
+            var timestampDisplay = SessionStore.formatRelativeTime(s.updated_at)
+            sessionModel.append({
+                "sessionId": s.id,
+                "title": s.title,
+                "provider": providerDisplay,
+                "timestamp": timestampDisplay
+            });
+        }
+    }
+
+    function getProviderLabel(provider, model) {
+        if (provider === "ollama") {
+            return "Ollama · " + (model || "unknown");
+        } else if (provider.startsWith("openclaw:")) {
+            return "OpenClaw · " + (model || "unknown");
+        } else if (provider.startsWith("openai-compatible:")) {
+            return (model || "OpenAI Compatible");
+        } else if (provider === "opencode") {
+            return "OpenCode · " + (model || "unknown");
+        }
+        return provider + " · " + (model || "");
+    }
+
+    function loadSessionById(sessionId) {
+        if (isLoading) return;
+
+        if (currentSessionId === sessionId) return;
+
+        var sessionInfo = SessionStore.getSession(sessionId);
+        if (!sessionInfo || !sessionInfo.id) return;
+
+        listModelController.clear();
+        promptArray = [];
+        OpenCodeClient.resetSession();
+
+        var messages = SessionStore.loadSession(sessionId);
+        for (var i = 0; i < messages.length; i++) {
+            var msg = messages[i];
+            var roleName = msg.role === "user" ? "User" : "Assistant";
+            listModelController.append({
+                "name": roleName,
+                "content": msg.content,
+                "thinkingContent": msg.thinkingContent || ""
+            });
+            if (msg.role === "user" || msg.role === "assistant") {
+                promptArray.push({ "role": msg.role, "content": msg.content, "images": [] });
+            }
+        }
+
+        currentSessionId = sessionId;
+        appSettings.lastActiveSessionId = sessionId;
     }
 
     function openSettings() {
@@ -394,32 +509,32 @@ Kirigami.Page {
             getModels();
         }
         messageInput.focusInput();
+        refreshSessionList();
+
+        if (appSettings.lastActiveSessionId !== "") {
+            var sessionInfo = SessionStore.getSession(appSettings.lastActiveSessionId);
+            if (sessionInfo && sessionInfo.id) {
+                loadSessionById(appSettings.lastActiveSessionId);
+            }
+        }
     }
 
     ListModel {
         id: sessionModel
+    }
 
-        Component.onCompleted: {
-            append({
-                "title": i18n("How to write a Kirigami app?"),
-                "provider": "Ollama · llama3.2",
-                "timestamp": i18n("2 min ago")
-            })
-            append({
-                "title": i18n("Explain quantum computing"),
-                "provider": "Ollama · mistral",
-                "timestamp": i18n("1 hour ago")
-            })
-            append({
-                "title": i18n("Debug my CMake config"),
-                "provider": "OpenCode · glm-5.1",
-                "timestamp": i18n("Yesterday")
-            })
-            append({
-                "title": i18n("Write Python web scraper"),
-                "provider": "OpenAI · gpt-4o",
-                "timestamp": i18n("2 days ago")
-            })
+    Timer {
+        id: streamingSaveTimer
+        interval: 500
+        repeat: false
+        onTriggered: {
+            if (currentSessionId !== "" && listModelController && listModelController.count > 0) {
+                var lastIdx = listModelController.count - 1;
+                var lastItem = listModelController.get(lastIdx);
+                if (lastItem && lastItem.name === "Assistant") {
+                    SessionStore.updateLastAssistantMessage(currentSessionId, lastItem.content, lastItem.thinkingContent || "");
+                }
+            }
         }
     }
 
@@ -434,19 +549,20 @@ Kirigami.Page {
             Layout.maximumWidth: Kirigami.Units.gridUnit * 16
             Layout.fillHeight: true
             sessionModel: sessionModel
-            activeSessionIndex: root.activeSessionIndex
+            currentSessionId: root.currentSessionId
 
-            onSessionClicked: function(index) {
-                root.activeSessionIndex = index
+            onSessionClicked: function(sessionId) {
+                root.loadSessionById(sessionId)
             }
-            onSessionDeleteClicked: function(index) {
-                sessionModel.remove(index)
-                if (root.activeSessionIndex >= sessionModel.count) {
-                    root.activeSessionIndex = Math.max(0, sessionModel.count - 1)
+            onSessionDeleteClicked: function(sessionId) {
+                if (sessionId === root.currentSessionId) {
+                    root.clearChat()
                 }
-                if (index < root.activeSessionIndex) {
-                    root.activeSessionIndex--
-                }
+                SessionStore.deleteSession(sessionId)
+                root.refreshSessionList()
+            }
+            onNewChatClicked: {
+                root.clearChat()
             }
         }
 

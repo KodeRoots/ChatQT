@@ -11,6 +11,7 @@ import org.kde.kirigami as Kirigami
 Kirigami.AbstractCard {
     id: root
 
+    property string sessionId: ""
     property string sessionTitle: ""
     property string sessionProvider: ""
     property string sessionTimestamp: ""
