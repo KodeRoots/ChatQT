@@ -1,5 +1,5 @@
 /*
-    SPDX-FileCopyrightText: 2026 Denys Madureira <denys@koderoots.org>
+    SPDX-FileCopyrightText: 2026 Denys Madureira <denysmb@zoho.com>
     SPDX-License-Identifier: LGPL-2.1-or-later
 */
 
@@ -42,6 +42,7 @@ Kirigami.AbstractCard {
         RowLayout {
             Layout.fillWidth: true
             spacing: Kirigami.Units.smallSpacing
+            Layout.preferredHeight: deleteButton.height
 
             Kirigami.Heading {
                 level: 3
@@ -50,9 +51,11 @@ Kirigami.AbstractCard {
                 elide: Text.ElideRight
                 maximumLineCount: 1
                 color: root.isActive ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
+                Layout.alignment: Qt.AlignVTop
             }
 
-            QQC2.ToolButton {
+            QQC2.Button {
+                id: deleteButton
                 icon.name: "delete-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18nc("@action:button", "Delete")
