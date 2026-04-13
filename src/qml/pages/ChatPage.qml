@@ -208,6 +208,9 @@ Kirigami.Page {
                 "content": text,
                 "thinkingContent": thinkingText !== undefined ? thinkingText : ""
             });
+            if (currentSessionId !== "") {
+                SessionStore.addMessage(currentSessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
+            }
         } else {
             listModel.setProperty(oldLength, "content", text);
             if (thinkingText !== undefined) {
@@ -261,11 +264,6 @@ Kirigami.Page {
             }
             promptArray.pop();
             restoreText = lastSentMessage;
-
-            if (currentSessionId !== "") {
-                SessionStore.addMessage(currentSessionId, "assistant", "", "");
-                refreshSessionList();
-            }
         } else {
             if (currentSessionId !== "" && listModelController.count > 0) {
                 var lastItem = listModelController.get(listModelController.count - 1);
