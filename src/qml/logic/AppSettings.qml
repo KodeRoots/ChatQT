@@ -26,6 +26,10 @@ QtObject {
     property string opencodeModel: _settings.value("opencodeModel", "")
     property string lastActiveSessionId: _settings.value("lastActiveSessionId", "")
 
+    // MCP settings
+    property string mcpServers: _settings.value("mcpServers", "[]")
+    property string mcpToolResults: "{}"
+
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
     property bool openclawEnabled: _settings.value("openclawEnabled", true)
@@ -147,6 +151,50 @@ QtObject {
         return null
     }
 
+    function getMcpServers() {
+        try {
+            var servers = JSON.parse(mcpServers)
+            return servers.map(function(s) {
+                if (s.enabled === undefined) {
+                    s.enabled = true
+                }
+                if (!s.id) {
+                    s.id = generateUuid()
+                }
+                return s
+            })
+        } catch (e) {
+            return []
+        }
+    }
+
+    function saveMcpServers(array) {
+        mcpServers = JSON.stringify(array)
+    }
+
+    function getEnabledMcpServers() {
+        var servers = getMcpServers()
+        var enabled = []
+        for (var i = 0; i < servers.length; i++) {
+            if (servers[i].enabled === true) {
+                enabled.push(servers[i])
+            }
+        }
+        return enabled
+    }
+
+    function getMcpToolResults() {
+        try {
+            return JSON.parse(mcpToolResults)
+        } catch (e) {
+            return {}
+        }
+    }
+
+    function saveMcpToolResults(results) {
+        mcpToolResults = JSON.stringify(results)
+    }
+
     function save() {
         _settings.setValue("provider", provider)
         _settings.setValue("openclawUrl", openclawUrl)
@@ -167,6 +215,7 @@ QtObject {
         _settings.setValue("openclawInstances", openclawInstances)
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
         _settings.setValue("lastActiveSessionId", lastActiveSessionId)
+        _settings.setValue("mcpServers", mcpServers)
         _settings.sync()
     }
 
@@ -193,6 +242,7 @@ QtObject {
     onOpenclawInstancesChanged: save()
     onSelectedOpenClawInstanceIdChanged: save()
     onLastActiveSessionIdChanged: save()
+    onMcpServersChanged: save()
 
     Component.onCompleted: {
         if (typeof ProcessManager !== "undefined") {

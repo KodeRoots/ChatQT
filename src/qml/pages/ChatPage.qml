@@ -13,6 +13,7 @@ import "../components"
 import "../logic"
 import "../logic/ApiClient.js" as ApiClient
 import "../logic/OpenCodeClient.js" as OpenCodeClient
+import "../logic/McpClient.js" as McpClient
 
 Kirigami.Page {
     id: root
@@ -54,6 +55,35 @@ Kirigami.Page {
     property string lastSentMessage: ""
     property var activeXhr: null
     property string currentSessionId: ""
+    property var mcpFunctions: []
+    property int mcpToolCallDepth: 0
+    readonly property int mcpMaxToolCallDepth: 10
+
+    function gatherMcpFunctions() {
+        var functions = []
+        var servers = appSettings.getEnabledMcpServers()
+        for (var i = 0; i < servers.length; i++) {
+            var state = McpClient.getServerState(servers[i].id)
+            if (state && state.tools && state.tools.length > 0) {
+                var converted = McpClient.mcpToolsToOpenAiFunctions(state.tools)
+                for (var j = 0; j < converted.length; j++) {
+                    functions.push(converted[j])
+                }
+            }
+        }
+        return functions
+    }
+
+    function hasConnectedMcpServers() {
+        var servers = appSettings.getEnabledMcpServers()
+        for (var i = 0; i < servers.length; i++) {
+            var state = McpClient.getServerState(servers[i].id)
+            if (state && state.status === "connected") {
+                return true
+            }
+        }
+        return false
+    }
 
     function buildProviderOptions() {
         var options = [
@@ -223,8 +253,17 @@ Kirigami.Page {
         }
     }
 
-    function handleRequestComplete(oldLength, listModel) {
-        if (activeXhr === null) return;
+    function handleRequestComplete(oldLength, listModel, finalText, toolCalls) {
+        if (activeXhr === null && mcpToolCallDepth === 0) return;
+
+        if (toolCalls && toolCalls.length > 0 && mcpToolCallDepth < mcpMaxToolCallDepth) {
+            handleMcpToolCalls(oldLength, listModel, finalText, toolCalls)
+            return
+        }
+
+        if (toolCalls && toolCalls.length > 0 && mcpToolCallDepth >= mcpMaxToolCallDepth) {
+            console.warn("MCP tool call depth limit reached (" + mcpMaxToolCallDepth + ")")
+        }
 
         if (listModel.count > oldLength) {
             const lastValue = listModel.get(oldLength);
@@ -234,11 +273,230 @@ Kirigami.Page {
 
         activeXhr = null;
         isStreaming = false;
+        mcpToolCallDepth = 0;
 
         if (currentSessionId !== "" && listModel.count > oldLength) {
             var lastMsg = listModel.get(oldLength);
             SessionStore.finalizeLastAssistantMessage(currentSessionId, lastMsg.content, lastMsg.thinkingContent || "");
             refreshSessionList();
+        }
+    }
+
+    function handleMcpToolCalls(oldLength, listModel, finalText, toolCalls) {
+        mcpToolCallDepth++
+
+        if (listModel.count === oldLength) {
+            var displayText = finalText || ""
+            if (displayText === "" && toolCalls.length > 0) {
+                var toolNames = []
+                for (var t = 0; t < toolCalls.length; t++) {
+                    toolNames.push(toolCalls[t].function.name)
+                }
+                displayText = i18n("Calling tools: %1", toolNames.join(", "))
+            }
+
+            listModel.append({
+                "name": "Assistant",
+                "content": displayText,
+                "thinkingContent": ""
+            })
+
+            if (currentSessionId !== "") {
+                var assistantMsg = { "role": "assistant", "content": displayText }
+                if (toolCalls.length > 0) {
+                    assistantMsg["tool_calls"] = toolCalls
+                }
+                promptArray.push(assistantMsg)
+                SessionStore.addMessage(currentSessionId, "assistant", displayText, "")
+            }
+        } else {
+            if (finalText) {
+                listModel.setProperty(oldLength, "content", finalText)
+            }
+            var existingAssistant = null
+            for (var p = promptArray.length - 1; p >= 0; p--) {
+                if (promptArray[p].role === "assistant") {
+                    existingAssistant = promptArray[p]
+                    break
+                }
+            }
+            if (existingAssistant && toolCalls.length > 0) {
+                existingAssistant["tool_calls"] = toolCalls
+            }
+        }
+
+        var pendingToolCalls = []
+        for (var i = 0; i < toolCalls.length; i++) {
+            pendingToolCalls.push(toolCalls[i])
+        }
+
+        executeNextMcpToolCall(pendingToolCalls, 0, oldLength, listModel)
+    }
+
+    function executeNextMcpToolCall(toolCalls, currentIndex, oldLength, listModel) {
+        if (currentIndex >= toolCalls.length) {
+            sendMcpFollowUpRequest(oldLength, listModel)
+            return
+        }
+
+        var toolCall = toolCalls[currentIndex]
+        var funcName = toolCall.function.name
+        var funcArgs = {}
+        try {
+            funcArgs = JSON.parse(toolCall.function.arguments || "{}")
+        } catch (e) {
+            funcArgs = {}
+        }
+
+        var mcpToolName = McpClient.parseToolCallName(funcName)
+        var isMcp = McpClient.isMcpToolCall(funcName)
+
+        listModel.append({
+            "name": "Tool",
+            "content": i18n("Calling %1…").arg(funcName),
+            "thinkingContent": ""
+        })
+
+        if (!isMcp) {
+            var errorMsg = i18n("Tool %1 is not an MCP tool").arg(funcName)
+            listModel.setProperty(listModel.count - 1, "content", errorMsg)
+            promptArray.push({
+                "role": "tool",
+                "tool_call_id": toolCall.id,
+                "content": errorMsg
+            })
+            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+            return
+        }
+
+        var servers = appSettings.getEnabledMcpServers()
+        var foundServer = null
+        var foundTools = null
+
+        for (var s = 0; s < servers.length; s++) {
+            var state = McpClient.getServerState(servers[s].id)
+            if (state && state.tools) {
+                for (var t = 0; t < state.tools.length; t++) {
+                    if (state.tools[t].name === mcpToolName) {
+                        foundServer = servers[s]
+                        foundTools = state
+                        break
+                    }
+                }
+                if (foundServer) break
+            }
+        }
+
+        if (!foundServer) {
+            var errorMsg2 = i18n("MCP server not found for tool %1").arg(funcName)
+            listModel.setProperty(listModel.count - 1, "content", errorMsg2)
+            promptArray.push({
+                "role": "tool",
+                "tool_call_id": toolCall.id,
+                "content": errorMsg2
+            })
+            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+            return
+        }
+
+        McpClient.callTool(
+            foundServer.url,
+            foundTools.sessionId,
+            foundTools.headers,
+            mcpToolName,
+            funcArgs,
+            function(result) {
+                var resultContent = result.content || ""
+                if (result.isError) {
+                    resultContent = i18n("Error: %1").arg(resultContent)
+                }
+
+                listModel.setProperty(listModel.count - 1, "content",
+                    i18n("%1: %2").arg(funcName).arg(resultContent.substring(0, 500)))
+
+                if (currentSessionId !== "") {
+                    SessionStore.addMessage(currentSessionId, "tool",
+                        i18n("%1 result: %2").arg(funcName).arg(resultContent.substring(0, 500)), "")
+                }
+
+                promptArray.push({
+                    "role": "tool",
+                    "tool_call_id": toolCall.id,
+                    "content": resultContent
+                })
+
+                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+            },
+            function(code, message) {
+                var errorMsg3 = i18n("Tool %1 failed: %2").arg(funcName).arg(message)
+                listModel.setProperty(listModel.count - 1, "content", errorMsg3)
+
+                promptArray.push({
+                    "role": "tool",
+                    "tool_call_id": toolCall.id,
+                    "content": errorMsg3
+                })
+
+                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+            }
+        )
+    }
+
+    function sendMcpFollowUpRequest(oldLength, listModel) {
+        if (currentProvider.startsWith("openai-compatible:")) {
+            var provider = appSettings.getSelectedOpenAICompatibleProvider()
+            if (provider) {
+                var mcpFuncs = gatherMcpFunctions()
+                activeXhr = ApiClient.requestOpenAICompatible(
+                    provider.url,
+                    provider.token,
+                    provider.model,
+                    promptArray,
+                    thinkingEnabled,
+                    null,
+                    false,
+                    listModel,
+                    handleStreaming,
+                    handleRequestComplete,
+                    mcpFuncs.length > 0 ? mcpFuncs : undefined
+                )
+            }
+        } else if (currentProvider === "ollama") {
+            activeXhr = ApiClient.requestOllama(
+                currentModel,
+                promptArray,
+                listModel,
+                handleStreaming,
+                handleRequestComplete,
+                thinkingEnabled
+            )
+        } else if (currentProvider.startsWith("openclaw")) {
+            var instance = appSettings.getSelectedOpenClawInstance()
+            if (instance) {
+                activeXhr = ApiClient.requestOpenAICompatible(
+                    instance.url,
+                    instance.token,
+                    "openclaw",
+                    promptArray,
+                    thinkingEnabled,
+                    { "x-openclaw-agent-id": "main" },
+                    true,
+                    listModel,
+                    handleStreaming,
+                    handleRequestComplete
+                )
+            }
+        } else if (currentProvider === "opencode") {
+            activeXhr = OpenCodeClient.requestOpenCode(
+                appSettings.opencodeUrl,
+                appSettings.opencodeUsername,
+                appSettings.opencodePassword,
+                appSettings.opencodeModel,
+                promptArray,
+                listModel,
+                handleStreaming,
+                handleRequestComplete
+            )
         }
     }
 
@@ -364,6 +622,9 @@ Kirigami.Page {
 
         isLoading = true;
         listView.positionViewAtEnd();
+        mcpToolCallDepth = 0;
+
+        mcpFunctions = gatherMcpFunctions()
 
         if (currentProvider === "ollama") {
             activeXhr = ApiClient.requestOllama(
@@ -403,7 +664,8 @@ Kirigami.Page {
                     false,
                     listModel,
                     handleStreaming,
-                    handleRequestComplete
+                    handleRequestComplete,
+                    mcpFunctions.length > 0 ? mcpFunctions : undefined
                 );
             }
         } else if (currentProvider === "opencode") {
@@ -684,6 +946,7 @@ Kirigami.Page {
                 messageText: ApiClient.preprocessMarkdown(content)
                 senderName: name
                 thinkingText: thinkingContent || ""
+                isToolMessage: name === "Tool"
             }
 
             Controls.ScrollBar.vertical: Controls.ScrollBar {}

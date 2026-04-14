@@ -15,6 +15,7 @@ Kirigami.AbstractCard {
     property string senderName: ""
     property string thinkingText: ""
     property bool thinkingExpanded: false
+    property bool isToolMessage: false
 
     readonly property bool isUser: senderName === "User"
 
@@ -29,7 +30,11 @@ Kirigami.AbstractCard {
             text: senderName
             font.weight: Font.Bold
             font.pointSize: Kirigami.Theme.smallFont.pointSize
-            color: isUser ? Kirigami.Theme.disabledTextColor : Kirigami.Theme.textColor
+            color: {
+                if (isToolMessage) return Kirigami.Theme.neutralTextColor
+                if (isUser) return Kirigami.Theme.disabledTextColor
+                return Kirigami.Theme.textColor
+            }
         }
 
         ColumnLayout {

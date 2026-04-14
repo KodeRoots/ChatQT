@@ -63,14 +63,17 @@ qt_add_qml_module(chatqt
         src/qml/components/InstanceCard.qml
         src/qml/components/SessionCard.qml
         src/qml/components/SessionSidebar.qml
+        src/qml/components/McpCard.qml
         src/qml/settings/SettingsPage.qml
         src/qml/settings/SettingsGeneral.qml
         src/qml/settings/SettingsOpenClaw.qml
         src/qml/settings/SettingsOpenAICompatible.qml
         src/qml/settings/SettingsOpenCode.qml
+        src/qml/settings/SettingsMCP.qml
         src/qml/logic/AppSettings.qml
         src/qml/logic/ApiClient.js
         src/qml/logic/OpenCodeClient.js
+        src/qml/logic/McpClient.js
 )
 
 target_link_libraries(chatqt PRIVATE

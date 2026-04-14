@@ -44,6 +44,11 @@ Kirigami.ScrollablePage {
         SettingsOpenCode {}
     }
 
+    Component {
+        id: mcpPage
+        SettingsMCP {}
+    }
+
     FormCard.FormCard {
         id: formCard
         width: parent.width
@@ -109,6 +114,18 @@ Kirigami.ScrollablePage {
             description: i18nc("@info:whatsthis", "Configure OpenCode settings")
             icon.name: "network-server"
             onClicked: applicationWindow().pageStack.push(opencodePage, {
+                settings: root.settings
+            })
+        }
+
+        FormCard.FormDelegateSeparator { above: opencodeButton; below: mcpButton }
+
+        FormCard.FormButtonDelegate {
+            id: mcpButton
+            text: i18nc("@action:button", "MCP Servers")
+            description: i18nc("@info:whatsthis", "Configure MCP servers for AI tool access")
+            icon.name: "network-connect"
+            onClicked: applicationWindow().pageStack.push(mcpPage, {
                 settings: root.settings
             })
         }

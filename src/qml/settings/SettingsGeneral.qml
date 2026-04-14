@@ -74,6 +74,19 @@ Kirigami.ScrollablePage {
             }
         }
 
+        Kirigami.Separator {
+            Kirigami.FormData.label: i18nc("@title:group", "MCP (Model Context Protocol):")
+            Kirigami.FormData.isSection: true
+        }
+
+        QQC2.Label {
+            text: i18nc("@info", "MCP allows AI models to use external tools. Configure MCP servers in the MCP Servers settings page.")
+            font: Kirigami.Theme.smallFont
+            color: Kirigami.Theme.disabledTextColor
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+        }
+
         QQC2.Label {
             text: i18nc("@info", "Disabled providers will not appear in the provider dropdown.")
             font: Kirigami.Theme.smallFont

@@ -90,7 +90,7 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
     return xhr;
 }
 
-function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEnabled, extraHeaders, includeV1, listModel, onStreaming, onComplete) {
+function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEnabled, extraHeaders, includeV1, listModel, onStreaming, onComplete, mcpFunctions) {
     const oldLength = listModel.count;
     let url = baseUrl.replace(/\/$/, '');
     if (includeV1) {
@@ -106,6 +106,19 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
 
     if (!thinkingEnabled) {
         requestData["chat_template_kwargs"] = {"enable_thinking": false};
+    }
+
+    if (mcpFunctions && mcpFunctions.length > 0) {
+        requestData["tools"] = mcpFunctions.map(function(f) {
+            return {
+                type: "function",
+                function: {
+                    name: f.name,
+                    description: f.description,
+                    parameters: f.parameters
+                }
+            };
+        });
     }
 
     const data = JSON.stringify(requestData);
@@ -126,6 +139,8 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
     let text = '';
     let thinkingText = '';
     let processedLength = 0;
+    let toolCalls = {};
+    let hasToolCalls = false;
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
@@ -152,6 +167,7 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
                             const choices = parsed.choices;
                             if (choices && choices.length > 0) {
                                 const delta = choices[0].delta;
+                                const finishReason = choices[0].finish_reason;
                                 if (delta) {
                                     let hasUpdate = false;
 
@@ -170,9 +186,42 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
                                         hasUpdate = true;
                                     }
 
+                                    if (delta.tool_calls) {
+                                        hasToolCalls = true;
+                                        for (var tc = 0; tc < delta.tool_calls.length; tc++) {
+                                            var toolCall = delta.tool_calls[tc];
+                                            var tcIndex = toolCall.index !== undefined ? toolCall.index : tc;
+                                            if (!toolCalls[tcIndex]) {
+                                                toolCalls[tcIndex] = {
+                                                    id: toolCall.id || "",
+                                                    type: "function",
+                                                    function: {
+                                                        name: "",
+                                                        arguments: ""
+                                                    }
+                                                };
+                                            }
+                                            if (toolCall.id) {
+                                                toolCalls[tcIndex].id = toolCall.id;
+                                            }
+                                            if (toolCall.function) {
+                                                if (toolCall.function.name) {
+                                                    toolCalls[tcIndex].function.name += toolCall.function.name;
+                                                }
+                                                if (toolCall.function.arguments) {
+                                                    toolCalls[tcIndex].function.arguments += toolCall.function.arguments;
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     if (hasUpdate && typeof onStreaming === 'function') {
                                         onStreaming(text, oldLength, listModel, thinkingText);
                                     }
+                                }
+
+                                if (finishReason === 'tool_calls') {
+                                    hasToolCalls = true;
                                 }
                             }
                         } catch (e) {
@@ -185,7 +234,14 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
 
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (typeof onComplete === 'function') {
-                onComplete(oldLength, listModel);
+                var finalToolCalls = [];
+                if (hasToolCalls) {
+                    var tcKeys = Object.keys(toolCalls);
+                    for (var k = 0; k < tcKeys.length; k++) {
+                        finalToolCalls.push(toolCalls[tcKeys[k]]);
+                    }
+                }
+                onComplete(oldLength, listModel, text, finalToolCalls);
             }
         }
     };
