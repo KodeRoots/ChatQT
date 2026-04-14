@@ -22,6 +22,7 @@
 #include "processmanager.h"
 #include "sessionstore.h"
 #include "hotreload.h"
+#include "mcpprocessmanager.h"
 
 int main(int argc, char *argv[])
 {
@@ -55,6 +56,9 @@ int main(int argc, char *argv[])
 
     // Register SessionStore as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", SessionStore::instance());
+
+    // Register McpProcessManager as singleton
+    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "McpProcessManager", McpProcessManager::instance());
 
     QObject::connect(&app, &QApplication::aboutToQuit,
                      ProcessManager::instance(), &ProcessManager::cleanShutdown);

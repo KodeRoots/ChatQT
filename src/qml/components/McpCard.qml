@@ -18,6 +18,7 @@ Kirigami.AbstractCard {
     property bool serverEnabled
     property string serverStatus: "disconnected"
     property int serverToolCount: 0
+    property string serverCommand
 
     signal editClicked
     signal removeClicked
@@ -147,6 +148,7 @@ Kirigami.AbstractCard {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.largeSpacing
+                visible: root.serverType === "remote"
 
                 QQC2.Label {
                     text: i18nc("@label", "URL:")
@@ -166,6 +168,27 @@ Kirigami.AbstractCard {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.largeSpacing
+                visible: root.serverType === "stdio"
+
+                QQC2.Label {
+                    text: i18nc("@label", "Command:")
+                    font: Kirigami.Theme.smallFont
+                    color: Kirigami.Theme.disabledTextColor
+                }
+
+                QQC2.Label {
+                    text: root.serverCommand != "" ? root.serverCommand : i18nc("@info", "Not set")
+                    font: Kirigami.Theme.defaultFont
+                    color: root.serverCommand != "" ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
+                    Layout.fillWidth: true
+                    wrapMode: Text.ElideMiddle
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: Kirigami.Units.largeSpacing
+                visible: root.serverType === "remote"
 
                 QQC2.Label {
                     text: i18nc("@label", "Type:")
@@ -174,7 +197,7 @@ Kirigami.AbstractCard {
                 }
 
                 QQC2.Label {
-                    text: root.serverType === "remote" ? i18nc("@info", "Remote (Streamable HTTP)") : i18nc("@info", "Unknown")
+                    text: root.serverType === "stdio" ? i18nc("@info", "Local (stdio)") : i18nc("@info", "Remote (Streamable HTTP)")
                     font: Kirigami.Theme.defaultFont
                     color: Kirigami.Theme.textColor
                     Layout.fillWidth: true
@@ -184,6 +207,7 @@ Kirigami.AbstractCard {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.largeSpacing
+                visible: root.serverType === "remote"
 
                 QQC2.Label {
                     text: i18nc("@label", "Token:")
@@ -198,6 +222,7 @@ Kirigami.AbstractCard {
                     font: Kirigami.Theme.defaultFont
                     color: root.serverToken != "" ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
                     Layout.fillWidth: true
+                    wrapMode: Text.Wrap
                 }
             }
 

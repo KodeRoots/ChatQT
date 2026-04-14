@@ -48,6 +48,7 @@ qt_add_executable(chatqt
     src/processmanager.cpp
     src/sessionstore.cpp
     src/hotreload.cpp
+    src/mcpprocessmanager.cpp
 )
 
 qt_add_qml_module(chatqt

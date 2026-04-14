@@ -399,6 +399,11 @@ Kirigami.Page {
             return
         }
 
+        if (foundServer.type === "stdio" || foundTools.type === "stdio") {
+            callStdioMcpTool(foundServer.id, mcpToolName, funcArgs, toolCall.id, funcName, listModel, toolCalls, currentIndex, oldLength)
+            return
+        }
+
         McpClient.callTool(
             foundServer.url,
             foundTools.sessionId,
@@ -440,6 +445,95 @@ Kirigami.Page {
                 executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
             }
         )
+    }
+
+    function callStdioMcpTool(serverId, toolName, arguments, toolCallId, funcName, listModel, toolCalls, currentIndex, oldLength) {
+        var request = McpClient.createJsonRpcRequest("tools/call", {
+            name: toolName,
+            arguments: arguments
+        })
+        var requestId = request.id
+        var jsonStr = JSON.stringify(request)
+
+        var pendingCalls = {}
+
+        pendingCalls[requestId] = {
+            toolCallId: toolCallId,
+            funcName: funcName,
+            listModel: listModel,
+            toolCalls: toolCalls,
+            currentIndex: currentIndex,
+            oldLength: oldLength
+        }
+
+        if (!_stdioPendingCalls) _stdioPendingCalls = {}
+        _stdioPendingCalls[requestId] = pendingCalls[requestId]
+
+        McpProcessManager.sendMessage(serverId, jsonStr, requestId)
+    }
+
+    property var _stdioPendingCalls: ({})
+
+    Connections {
+        target: McpProcessManager
+
+        function onMessageReceived(serverId, jsonMessage) {
+            try {
+                var response = JSON.parse(jsonMessage)
+                if (!response.id || !_stdioPendingCalls || !_stdioPendingCalls[response.id]) return
+
+                var pending = _stdioPendingCalls[response.id]
+                delete _stdioPendingCalls[response.id]
+
+                if (response.result) {
+                    var resultText = ""
+                    var isError = response.result.isError || false
+
+                    if (response.result.content) {
+                        for (var i = 0; i < response.result.content.length; i++) {
+                            var item = response.result.content[i]
+                            if (item.type === "text") resultText += item.text
+                            else if (item.type === "image") resultText += "[Image data]"
+                            else if (item.type === "audio") resultText += "[Audio data]"
+                            else if (item.type === "resource") resultText += (item.resource.text || item.resource.uri || "[Resource]")
+                        }
+                    }
+
+                    if (isError) {
+                        resultText = i18n("Error: %1").arg(resultText)
+                    }
+
+                    pending.listModel.setProperty(pending.listModel.count - 1, "content",
+                        i18n("%1: %2").arg(pending.funcName).arg(resultText.substring(0, 500)))
+
+                    if (currentSessionId !== "") {
+                        SessionStore.addMessage(currentSessionId, "tool",
+                            i18n("%1 result: %2").arg(pending.funcName).arg(resultText.substring(0, 500)), "")
+                    }
+
+                    promptArray.push({
+                        "role": "tool",
+                        "tool_call_id": pending.toolCallId,
+                        "content": resultText
+                    })
+
+                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel)
+                } else if (response.error) {
+                    var errorMsg = i18n("Tool %1 failed: %2").arg(pending.funcName).arg(response.error.message || "Unknown error")
+                    pending.listModel.setProperty(pending.listModel.count - 1, "content", errorMsg)
+
+                    promptArray.push({
+                        "role": "tool",
+                        "tool_call_id": pending.toolCallId,
+                        "content": errorMsg
+                    })
+
+                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel)
+                }
+            } catch (e) {
+                console.warn("Failed to process stdio MCP response:", e)
+            }
+        }
     }
 
     function sendMcpFollowUpRequest(oldLength, listModel) {
