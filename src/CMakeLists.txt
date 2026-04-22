@@ -1,5 +1,7 @@
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/src)
 
+add_executable(chatqt)
+
 ecm_add_qml_module(chatqt
     URI org.koderoots.chatqt
 )
