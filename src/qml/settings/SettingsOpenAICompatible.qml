@@ -8,8 +8,7 @@ import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 
 import org.kde.kirigami as Kirigami
-import "../components" as COMPONENTS
-import "../logic/ApiClient.js" as ApiClient
+import org.koderoots.chatqt
 
 Kirigami.ScrollablePage {
     id: root
@@ -142,7 +141,7 @@ Kirigami.ScrollablePage {
 
             Repeater {
                 model: providersModel
-                delegate: COMPONENTS.ProviderCard {
+                delegate: ProviderCard {
                     Layout.fillWidth: true
                     providerDisplayName: providersModel.get(index).displayName
                     providerUrl: providersModel.get(index).url

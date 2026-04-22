@@ -70,32 +70,33 @@ int main(int argc, char *argv[])
     });
 
     QString qmlSourceDir = qEnvironmentVariable("QML_SRC_DIR");
-    QUrl url;
     if (!qmlSourceDir.isEmpty()) {
-        QString path = qmlSourceDir + QStringLiteral("/src/qml/main.qml");
-        url = QUrl::fromLocalFile(path);
+        QString path = qmlSourceDir + QStringLiteral("/main.qml");
+        QUrl url = QUrl::fromLocalFile(path);
         engine.addImportPath(qmlSourceDir);
-    } else {
-        url = QUrl(QStringLiteral("qrc:/org/koderoots/chatqt/src/qml/main.qml"));
-    }
 
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl) {
-            QCoreApplication::exit(-1);
+        QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                         &app, [url](QObject *obj, const QUrl &objUrl) {
+            if (!obj && url == objUrl) {
+                QCoreApplication::exit(-1);
+            }
+        }, Qt::QueuedConnection);
+        engine.load(url);
+
+        if (engine.rootObjects().isEmpty()) {
+            return -1;
         }
-    }, Qt::QueuedConnection);
-    engine.load(url);
 
-    if (engine.rootObjects().isEmpty()) {
-        return -1;
-    }
-
-    if (!qmlSourceDir.isEmpty()) {
         auto *hotReload = new HotReload(&engine, url, &app);
         auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
         if (window) {
             hotReload->setWindow(window);
+        }
+    } else {
+        engine.loadFromModule("org.koderoots.chatqt", "Main");
+
+        if (engine.rootObjects().isEmpty()) {
+            return -1;
         }
     }
 

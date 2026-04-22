@@ -9,8 +9,7 @@ import QtQuick.Layouts
 
 import org.kde.kirigami as Kirigami
 import org.kde.chatqt
-import "../components" as COMPONENTS
-import "../logic/McpClient.js" as McpClient
+import org.koderoots.chatqt
 
 Kirigami.ScrollablePage {
     id: root
@@ -375,7 +374,7 @@ Kirigami.ScrollablePage {
 
             Repeater {
                 model: serversModel
-                delegate: COMPONENTS.McpCard {
+                delegate: McpCard {
                     Layout.fillWidth: true
                     serverDisplayName: serversModel.get(index).displayName
                     serverUrl: serversModel.get(index).url || ""

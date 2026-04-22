@@ -8,15 +8,17 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 import org.kde.chatqt
-
-import "../components"
-import "../logic"
-import "../logic/ApiClient.js" as ApiClient
-import "../logic/OpenCodeClient.js" as OpenCodeClient
-import "../logic/McpClient.js" as McpClient
+import org.koderoots.chatqt
 
 Kirigami.Page {
     id: root
+
+    Component {
+        id: settingsPageComponent
+        SettingsPage {
+            settings: appSettings
+        }
+    }
 
     actions: [
         Kirigami.Action {
@@ -862,9 +864,7 @@ Kirigami.Page {
     }
 
     function openSettings() {
-        applicationWindow().pageStack.pushDialogLayer(Qt.resolvedUrl("../settings/SettingsPage.qml"), {
-            settings: appSettings
-        }, {
+        applicationWindow().pageStack.pushDialogLayer(settingsPageComponent, {}, {
             title: i18n("Settings"),
             width: 600,
             height: 550,

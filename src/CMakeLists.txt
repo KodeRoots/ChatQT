@@ -19,7 +19,7 @@ target_sources(chatqt
 
 ecm_target_qml_sources(chatqt
     SOURCES
-    qml/main.qml
+    qml/Main.qml
     qml/pages/ChatPage.qml
     qml/components/ChatMessage.qml
     qml/components/MessageInput.qml

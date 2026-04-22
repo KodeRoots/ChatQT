@@ -10,8 +10,7 @@ import QtQuick.Dialogs
 
 import org.kde.kirigami as Kirigami
 import org.kde.chatqt
-
-import "../components"
+import org.koderoots.chatqt
 
 Kirigami.ScrollablePage {
     id: root
