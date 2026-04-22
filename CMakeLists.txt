@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 
 project(chatqt VERSION 1.0.0 LANGUAGES CXX)
 
@@ -18,6 +18,7 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 include(ECMSetupVersion)
 include(ECMGenerateHeaders)
 include(ECMPoQmTools)
+include(ECMQmlModule)
 
 find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     Core
@@ -26,6 +27,7 @@ find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     Widgets
     Sql
     Network
+    Qml
 )
 
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
@@ -43,57 +45,8 @@ ecm_setup_version(${PROJECT_VERSION}
     VERSION_HEADER "${CMAKE_CURRENT_BINARY_DIR}/chatqt_version.h"
 )
 
-qt_add_executable(chatqt 
-    src/main.cpp
-    src/processmanager.cpp
-    src/sessionstore.cpp
-    src/hotreload.cpp
-    src/mcpprocessmanager.cpp
-)
+add_subdirectory(src)
 
-qt_add_qml_module(chatqt
-    URI org.koderoots.chatqt
-    VERSION 1.0
-    QML_FILES
-        src/qml/main.qml
-        src/qml/pages/ChatPage.qml
-        src/qml/components/ChatMessage.qml
-        src/qml/components/MessageInput.qml
-        src/qml/components/ServerStatusIndicator.qml
-        src/qml/components/ProviderCard.qml
-        src/qml/components/InstanceCard.qml
-        src/qml/components/SessionCard.qml
-        src/qml/components/SessionSidebar.qml
-        src/qml/components/McpCard.qml
-        src/qml/settings/SettingsPage.qml
-        src/qml/settings/SettingsGeneral.qml
-        src/qml/settings/SettingsOpenClaw.qml
-        src/qml/settings/SettingsOpenAICompatible.qml
-        src/qml/settings/SettingsOpenCode.qml
-        src/qml/settings/SettingsMCP.qml
-        src/qml/logic/AppSettings.qml
-        src/qml/logic/ApiClient.js
-        src/qml/logic/OpenCodeClient.js
-        src/qml/logic/McpClient.js
-)
-
-target_link_libraries(chatqt PRIVATE
-    Qt6::Core
-    Qt6::Quick
-    Qt6::QuickControls2
-    Qt6::Widgets
-    Qt6::Sql
-    Qt6::Network
-    KF6::CoreAddons
-    KF6::I18n
-    KF6::Kirigami
-    KF6::ConfigGui
-    KF6::Crash
-)
-
-target_include_directories(chatqt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-install(TARGETS chatqt ${KDE_INSTALL_TARGETS_DEFAULT_ARGS})
 install(FILES resources/icons/org.koderoots.chatqt.svg DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 install(FILES org.koderoots.chatqt.desktop DESTINATION ${KDE_INSTALL_APPDIR})
 install(FILES org.koderoots.chatqt.metainfo.xml DESTINATION ${KDE_INSTALL_METAINFODIR})
