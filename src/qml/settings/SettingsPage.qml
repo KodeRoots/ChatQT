@@ -77,7 +77,7 @@ Kirigami.ScrollablePage {
             text: i18nc("@action:button", "General")
             description: i18nc("@info:whatsthis", "Select the active AI provider")
             icon.name: "preferences-system"
-            onClicked: applicationWindow().pageStack.push(generalPage, {
+            onClicked: Kirigami.PageStack.push(generalPage, {
                 settings: root.settings
             })
         }
@@ -89,7 +89,7 @@ Kirigami.ScrollablePage {
             text: i18nc("@action:button", "OpenClaw")
             description: i18nc("@info:whatsthis", "Configure OpenClaw URL and token")
             icon.name: "network-server"
-            onClicked: applicationWindow().pageStack.push(openclawPage, {
+            onClicked: Kirigami.PageStack.push(openclawPage, {
                 settings: root.settings
             })
         }
@@ -101,7 +101,7 @@ Kirigami.ScrollablePage {
             text: i18nc("@action:button", "OpenAI Compatible")
             description: i18nc("@info:whatsthis", "Configure OpenAI-compatible API settings")
             icon.name: "network-connect"
-            onClicked: applicationWindow().pageStack.push(openaiCompatiblePage, {
+            onClicked: Kirigami.PageStack.push(openaiCompatiblePage, {
                 settings: root.settings
             })
         }
@@ -113,7 +113,7 @@ Kirigami.ScrollablePage {
             text: i18nc("@action:button", "OpenCode")
             description: i18nc("@info:whatsthis", "Configure OpenCode settings")
             icon.name: "network-server"
-            onClicked: applicationWindow().pageStack.push(opencodePage, {
+            onClicked: Kirigami.PageStack.push(opencodePage, {
                 settings: root.settings
             })
         }
@@ -125,7 +125,7 @@ Kirigami.ScrollablePage {
             text: i18nc("@action:button", "MCP Servers")
             description: i18nc("@info:whatsthis", "Configure MCP servers for AI tool access")
             icon.name: "network-connect"
-            onClicked: applicationWindow().pageStack.push(mcpPage, {
+            onClicked: Kirigami.PageStack.push(mcpPage, {
                 settings: root.settings
             })
         }
