@@ -67,7 +67,7 @@ ColumnLayout {
         }
 
         delegate: SessionCard {
-            width: sessionListView.width - (sessionScrollBar.visible ? sessionScrollBar.width : 0)
+            width: sessionListView.width - Kirigami.Units.smallSpacing - (sessionScrollBar.visible ? sessionScrollBar.width : 0)
             sessionId: model.sessionId
             sessionTitle: model.title
             sessionProvider: model.provider

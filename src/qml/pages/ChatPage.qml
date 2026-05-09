@@ -1036,7 +1036,7 @@ Kirigami.Page {
             }
 
             delegate: ChatMessage {
-                width: listView.width - Kirigami.Units.largeSpacing * 2 - (chatScrollBar.visible ? chatScrollBar.width : 0)
+                width: listView.width - Kirigami.Units.largeSpacing - (chatScrollBar.visible ? chatScrollBar.width : 0)
                 messageText: ApiClient.preprocessMarkdown(content)
                 senderName: name
                 thinkingText: thinkingContent || ""
