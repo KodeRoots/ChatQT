@@ -1036,14 +1036,16 @@ Kirigami.Page {
             }
 
             delegate: ChatMessage {
-                width: listView.width - Kirigami.Units.largeSpacing * 2
+                width: listView.width - Kirigami.Units.largeSpacing * 2 - (chatScrollBar.visible ? chatScrollBar.width : 0)
                 messageText: ApiClient.preprocessMarkdown(content)
                 senderName: name
                 thinkingText: thinkingContent || ""
                 isToolMessage: name === "Tool"
             }
 
-            Controls.ScrollBar.vertical: Controls.ScrollBar {}
+            Controls.ScrollBar.vertical: Controls.ScrollBar {
+                id: chatScrollBar
+            }
         }
 
         Kirigami.Separator {
