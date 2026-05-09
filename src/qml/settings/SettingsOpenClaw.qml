@@ -176,6 +176,7 @@ Kirigami.ScrollablePage {
 
         Kirigami.Dialog {
             id: editSheet
+            parent: root
             title: i18nc("@title:window", "Edit Instance")
             padding: Kirigami.Units.largeSpacing
             width: Kirigami.Units.gridUnit * 32
