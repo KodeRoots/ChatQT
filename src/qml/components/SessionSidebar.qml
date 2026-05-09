@@ -67,7 +67,7 @@ ColumnLayout {
         }
 
         delegate: SessionCard {
-            width: sessionListView.width
+            width: sessionListView.width - (sessionScrollBar.visible ? sessionScrollBar.width : 0)
             sessionId: model.sessionId
             sessionTitle: model.title
             sessionProvider: model.provider
@@ -78,6 +78,8 @@ ColumnLayout {
             onDeleteClicked: root.sessionDeleteClicked(model.sessionId)
         }
 
-        QQC2.ScrollBar.vertical: QQC2.ScrollBar {}
+        QQC2.ScrollBar.vertical: QQC2.ScrollBar {
+            id: sessionScrollBar
+        }
     }
 }
