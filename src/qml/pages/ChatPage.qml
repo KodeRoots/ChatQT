@@ -558,13 +558,15 @@ Kirigami.Page {
                 )
             }
         } else if (currentProvider === "ollama") {
+            var ollamaMcpFuncs = gatherMcpFunctions()
             activeXhr = ApiClient.requestOllama(
                 currentModel,
                 promptArray,
                 listModel,
                 handleStreaming,
                 handleRequestComplete,
-                thinkingEnabled
+                thinkingEnabled,
+                ollamaMcpFuncs.length > 0 ? ollamaMcpFuncs : undefined
             )
         } else if (currentProvider.startsWith("openclaw")) {
             var instance = appSettings.getSelectedOpenClawInstance()
@@ -729,7 +731,8 @@ Kirigami.Page {
                 listModel,
                 handleStreaming,
                 handleRequestComplete,
-                thinkingEnabled
+                thinkingEnabled,
+                mcpFunctions.length > 0 ? mcpFunctions : undefined
             );
         } else if (currentProvider.startsWith("openclaw")) {
             var instance = appSettings.getSelectedOpenClawInstance()

@@ -18,16 +18,32 @@ function abortActiveRequest() {
     return false;
 }
 
-function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete, thinkingEnabled) {
+function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete, thinkingEnabled, mcpFunctions) {
     const oldLength = listModel.count;
     const url = 'http://127.0.0.1:11434/api/chat';
-    const data = JSON.stringify({
+
+    let requestData = {
         "model": modelsComboboxCurrentValue,
         "keep_alive": "5m",
         "options": {},
         "think": thinkingEnabled !== false,
         "messages": promptArray
-    });
+    };
+
+    if (mcpFunctions && mcpFunctions.length > 0) {
+        requestData["tools"] = mcpFunctions.map(function(f) {
+            return {
+                type: "function",
+                function: {
+                    name: f.name,
+                    description: f.description,
+                    parameters: f.parameters
+                }
+            };
+        });
+    }
+
+    const data = JSON.stringify(requestData);
 
     let xhr = new XMLHttpRequest();
     _activeXhr = xhr;
@@ -38,6 +54,8 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
     let processedLength = 0;
     let accumulatedText = '';
     let accumulatedThinking = '';
+    let toolCalls = {};
+    let hasToolCalls = false;
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
@@ -58,8 +76,9 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
                         const parsedObject = JSON.parse(line);
                         const content = parsedObject?.message?.content;
                         const thinking = parsedObject?.message?.thinking;
+                        const msgToolCalls = parsedObject?.message?.tool_calls;
+                        const doneReason = parsedObject?.done_reason;
 
-                        // Accumulate incremental deltas
                         if (content) {
                             accumulatedText += content;
                             hasUpdate = true;
@@ -67,6 +86,41 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
                         if (thinking) {
                             accumulatedThinking += thinking;
                             hasUpdate = true;
+                        }
+                        if (msgToolCalls && msgToolCalls.length > 0) {
+                            hasToolCalls = true;
+                            for (let tc = 0; tc < msgToolCalls.length; tc++) {
+                                const tcItem = msgToolCalls[tc];
+                                const tcIndex = tc;
+                                if (!toolCalls[tcIndex]) {
+                                    toolCalls[tcIndex] = {
+                                        id: tcItem.id || ("ollama_tc_" + tcIndex),
+                                        type: "function",
+                                        function: {
+                                            name: "",
+                                            arguments: ""
+                                        }
+                                    };
+                                }
+                                if (tcItem.id) {
+                                    toolCalls[tcIndex].id = tcItem.id;
+                                }
+                                if (tcItem.function) {
+                                    if (tcItem.function.name) {
+                                        toolCalls[tcIndex].function.name = tcItem.function.name;
+                                    }
+                                    if (tcItem.function.arguments) {
+                                        if (typeof tcItem.function.arguments === 'string') {
+                                            toolCalls[tcIndex].function.arguments += tcItem.function.arguments;
+                                        } else {
+                                            toolCalls[tcIndex].function.arguments += JSON.stringify(tcItem.function.arguments);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (doneReason === 'tool_calls') {
+                            hasToolCalls = true;
                         }
                     } catch (e) {
                         // Skip invalid JSON
@@ -78,11 +132,18 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
                 }
             }
         }
-    };
 
-    xhr.onload = function() {
-        if (typeof onComplete === 'function') {
-            onComplete(oldLength, listModel);
+        if (xhr.readyState === XMLHttpRequest.DONE) {
+            if (typeof onComplete === 'function') {
+                let finalToolCalls = [];
+                if (hasToolCalls) {
+                    let tcKeys = Object.keys(toolCalls);
+                    for (let k = 0; k < tcKeys.length; k++) {
+                        finalToolCalls.push(toolCalls[tcKeys[k]]);
+                    }
+                }
+                onComplete(oldLength, listModel, accumulatedText, finalToolCalls);
+            }
         }
     };
 
