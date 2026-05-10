@@ -173,14 +173,17 @@ QtObject {
     }
 
     function ensureDefaultMcpServers() {
-        if (mcpDefaultsInitialized) return
-
         var servers = getMcpServers()
         var hasBashMcp = false
         var hasFilesystem = false
         for (var i = 0; i < servers.length; i++) {
             if (servers[i].id === "built-in-bash-mcp") hasBashMcp = true
             if (servers[i].id === "built-in-filesystem") hasFilesystem = true
+        }
+
+        if (hasBashMcp && hasFilesystem) {
+            if (!mcpDefaultsInitialized) mcpDefaultsInitialized = true
+            return
         }
 
         if (!hasBashMcp) {
@@ -214,7 +217,7 @@ QtObject {
 
     function _getHomeDir() {
         var homeUrl = StandardPaths.writableLocation(StandardPaths.HomeLocation)
-        return homeUrl.replace(/^file:\/\//, "")
+        return homeUrl.toString().replace(/^file:\/\//, "")
     }
 
     function saveMcpServers(array) {

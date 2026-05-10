@@ -53,7 +53,7 @@ Kirigami.AbstractCard {
                 height: Kirigami.Units.gridUnit * 1.0
                 width: builtInLabel.width + Kirigami.Units.smallSpacing * 2
                 color: Kirigami.Theme.hoverColor
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.alignment: Qt.AlignVCenter
 
                 QQC2.Label {
                     id: builtInLabel
@@ -70,7 +70,7 @@ Kirigami.AbstractCard {
                 height: Kirigami.Units.gridUnit * 1.2
                 width: toolCountLabel.width + Kirigami.Units.smallSpacing * 2
                 color: Kirigami.Theme.positiveTextColor
-                anchors.verticalCenter: parent.verticalCenter
+                Layout.alignment: Qt.AlignVCenter
 
                 QQC2.Label {
                     id: toolCountLabel
