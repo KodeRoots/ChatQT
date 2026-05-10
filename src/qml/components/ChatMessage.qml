@@ -108,11 +108,11 @@ Kirigami.AbstractCard {
             onLinkActivated: function(link) {
                 Qt.openUrlExternally(link)
             }
-
-            HoverHandler {
-                id: hoverHandler
-            }
         }
+    }
+
+    HoverHandler {
+        id: cardHoverHandler
     }
 
     Controls.ToolButton {
@@ -123,7 +123,7 @@ Kirigami.AbstractCard {
         icon.name: "edit-copy-symbolic"
         display: Controls.AbstractButton.IconOnly
         text: i18n("Copy")
-        visible: hoverHandler.hovered
+        visible: cardHoverHandler.hovered
 
         onClicked: {
             textMessage.selectAll();
