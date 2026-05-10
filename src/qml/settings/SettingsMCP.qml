@@ -401,15 +401,15 @@ Kirigami.ScrollablePage {
                 model: serversModel
                 delegate: McpCard {
                     Layout.fillWidth: true
-                    serverDisplayName: serversModel.get(index).displayName
-                    serverUrl: serversModel.get(index).url || ""
-                    serverType: serversModel.get(index).type
-                    serverToken: serversModel.get(index).token || ""
-                    serverEnabled: serversModel.get(index).enabled !== undefined ? serversModel.get(index).enabled : true
-                    serverStatus: serversModel.get(index).connectionStatus || "disconnected"
-                    serverToolCount: serversModel.get(index).toolCount || 0
-                    serverCommand: serversModel.get(index).command || ""
-                    serverIsBuiltIn: serversModel.get(index).isBuiltIn === true
+                    serverDisplayName: model.displayName
+                    serverUrl: model.url || ""
+                    serverType: model.type
+                    serverToken: model.token || ""
+                    serverEnabled: model.enabled !== undefined ? model.enabled : true
+                    serverStatus: model.connectionStatus || "disconnected"
+                    serverToolCount: model.toolCount || 0
+                    serverCommand: model.command || ""
+                    serverIsBuiltIn: model.isBuiltIn === true
                     onEditClicked: editSheet.openServer(index)
                     onRemoveClicked: root.removeServer(index)
                     onEnabledToggled: root.toggleServerEnabled(index)
