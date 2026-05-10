@@ -59,13 +59,27 @@ Kirigami.ScrollablePage {
                 if (servers[i].env === undefined) {
                     servers[i].env = ""
                 }
+                if (servers[i].isBuiltIn === undefined) {
+                    servers[i].isBuiltIn = false
+                }
                 var state = McpClient.getServerState(servers[i].id)
                 servers[i].connectionStatus = state ? (state.status || "disconnected") : "disconnected"
                 servers[i].toolCount = state ? (state.toolCount || 0) : 0
                 serversModel.append(servers[i])
             }
+
+            autoConnectBuiltInServers()
         } catch (e) {
             console.error("Failed to parse MCP servers:", e)
+        }
+    }
+
+    function autoConnectBuiltInServers() {
+        for (var i = 0; i < serversModel.count; i++) {
+            var item = serversModel.get(i)
+            if (item.isBuiltIn && item.enabled && item.connectionStatus === "disconnected") {
+                connectToServer(i)
+            }
         }
     }
 
@@ -77,7 +91,8 @@ Kirigami.ScrollablePage {
                 id: item.id,
                 displayName: item.displayName,
                 type: item.type,
-                enabled: item.enabled !== undefined ? item.enabled : true
+                enabled: item.enabled !== undefined ? item.enabled : true,
+                isBuiltIn: item.isBuiltIn === true
             }
             if (item.type === "remote") {
                 server.url = item.url || ""
@@ -105,7 +120,8 @@ Kirigami.ScrollablePage {
                 command: "",
                 args: "",
                 env: "",
-                enabled: true
+                enabled: true,
+                isBuiltIn: false
             }
         }
         if (server.enabled === undefined) {
@@ -128,6 +144,9 @@ Kirigami.ScrollablePage {
         if (existing.enabled !== undefined) {
             server.enabled = existing.enabled
         }
+        if (existing.isBuiltIn !== undefined) {
+            server.isBuiltIn = existing.isBuiltIn
+        }
         server.connectionStatus = existing.connectionStatus || "disconnected"
         server.toolCount = existing.toolCount || 0
         serversModel.set(index, server)
@@ -136,6 +155,12 @@ Kirigami.ScrollablePage {
 
     function removeServer(index) {
         var item = serversModel.get(index)
+        if (item && item.isBuiltIn) {
+            applicationWindow().showPassiveNotification(
+                i18n("Built-in servers cannot be removed. Disable them instead.")
+            )
+            return
+        }
         if (item && item.id) {
             if (item.type === "stdio") {
                 McpProcessManager.stopProcess(item.id)
@@ -384,6 +409,7 @@ Kirigami.ScrollablePage {
                     serverStatus: serversModel.get(index).connectionStatus || "disconnected"
                     serverToolCount: serversModel.get(index).toolCount || 0
                     serverCommand: serversModel.get(index).command || ""
+                    serverIsBuiltIn: serversModel.get(index).isBuiltIn === true
                     onEditClicked: editSheet.openServer(index)
                     onRemoveClicked: root.removeServer(index)
                     onEnabledToggled: root.toggleServerEnabled(index)
@@ -430,6 +456,13 @@ Kirigami.ScrollablePage {
             }
 
             function openServer(index) {
+                var server = serversModel.get(index)
+                if (server.isBuiltIn) {
+                    applicationWindow().showPassiveNotification(
+                        i18n("Built-in servers cannot be edited.")
+                    )
+                    return
+                }
                 editingIndex = index
                 var server = serversModel.get(index)
                 displayNameField.text = server.displayName

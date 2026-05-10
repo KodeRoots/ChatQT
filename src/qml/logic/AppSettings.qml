@@ -29,6 +29,7 @@ QtObject {
     // MCP settings
     property string mcpServers: _settings.value("mcpServers", "[]")
     property string mcpToolResults: "{}"
+    property bool mcpDefaultsInitialized: _settings.value("mcpDefaultsInitialized", false)
 
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
@@ -161,11 +162,59 @@ QtObject {
                 if (!s.id) {
                     s.id = generateUuid()
                 }
+                if (s.isBuiltIn === undefined) {
+                    s.isBuiltIn = false
+                }
                 return s
             })
         } catch (e) {
             return []
         }
+    }
+
+    function ensureDefaultMcpServers() {
+        if (mcpDefaultsInitialized) return
+
+        var servers = getMcpServers()
+        var hasBashMcp = false
+        var hasFilesystem = false
+        for (var i = 0; i < servers.length; i++) {
+            if (servers[i].id === "built-in-bash-mcp") hasBashMcp = true
+            if (servers[i].id === "built-in-filesystem") hasFilesystem = true
+        }
+
+        if (!hasBashMcp) {
+            servers.unshift({
+                id: "built-in-bash-mcp",
+                displayName: "Bash MCP",
+                type: "stdio",
+                enabled: true,
+                isBuiltIn: true,
+                command: "npx",
+                args: "bash-mcp",
+                env: ""
+            })
+        }
+        if (!hasFilesystem) {
+            servers.unshift({
+                id: "built-in-filesystem",
+                displayName: "Filesystem MCP",
+                type: "stdio",
+                enabled: true,
+                isBuiltIn: true,
+                command: "npx",
+                args: "-y @modelcontextprotocol/server-filesystem " + _getHomeDir(),
+                env: ""
+            })
+        }
+
+        saveMcpServers(servers)
+        mcpDefaultsInitialized = true
+    }
+
+    function _getHomeDir() {
+        var homeUrl = StandardPaths.writableLocation(StandardPaths.HomeLocation)
+        return homeUrl.replace(/^file:\/\//, "")
     }
 
     function saveMcpServers(array) {
@@ -216,6 +265,7 @@ QtObject {
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
         _settings.setValue("lastActiveSessionId", lastActiveSessionId)
         _settings.setValue("mcpServers", mcpServers)
+        _settings.setValue("mcpDefaultsInitialized", mcpDefaultsInitialized)
         _settings.sync()
     }
 
@@ -243,8 +293,11 @@ QtObject {
     onSelectedOpenClawInstanceIdChanged: save()
     onLastActiveSessionIdChanged: save()
     onMcpServersChanged: save()
+    onMcpDefaultsInitializedChanged: save()
 
     Component.onCompleted: {
+        ensureDefaultMcpServers()
+
         if (typeof ProcessManager !== "undefined") {
             opencodeUrl = ProcessManager.serverUrl
             if (ProcessManager.password !== "") {

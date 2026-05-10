@@ -19,6 +19,7 @@ Kirigami.AbstractCard {
     property string serverStatus: "disconnected"
     property int serverToolCount: 0
     property string serverCommand
+    property bool serverIsBuiltIn: false
 
     signal editClicked
     signal removeClicked
@@ -44,6 +45,23 @@ Kirigami.AbstractCard {
                 text: root.serverDisplayName != "" ? root.serverDisplayName : i18nc("@info", "Unnamed MCP Server")
                 Layout.fillWidth: true
                 elide: Text.ElideRight
+            }
+
+            Rectangle {
+                visible: root.serverIsBuiltIn
+                radius: Kirigami.Units.smallSpacing
+                height: Kirigami.Units.gridUnit * 1.0
+                width: builtInLabel.width + Kirigami.Units.smallSpacing * 2
+                color: Kirigami.Theme.hoverColor
+                anchors.verticalCenter: parent.verticalCenter
+
+                QQC2.Label {
+                    id: builtInLabel
+                    anchors.centerIn: parent
+                    text: i18nc("@info", "Built-in")
+                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    color: Kirigami.Theme.textColor
+                }
             }
 
             Rectangle {
@@ -77,6 +95,7 @@ Kirigami.AbstractCard {
             }
 
             QQC2.ToolButton {
+                visible: !root.serverIsBuiltIn
                 icon.name: "document-edit-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18nc("@action:button", "Edit")
@@ -89,6 +108,7 @@ Kirigami.AbstractCard {
             }
 
             QQC2.ToolButton {
+                visible: !root.serverIsBuiltIn
                 icon.name: "delete-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18nc("@action:button", "Remove")
