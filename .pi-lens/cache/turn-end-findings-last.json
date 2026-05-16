@@ -1,0 +1,4 @@
+{
+  "signature": "src/main.cpp::Unresolved from this turn — src/main.cpp:\n🔴 STOP — 1 issue(s) must be fixed:\n  L6: QApplication: No such file or directory",
+  "sessionId": "lens-mp8q75ce-28454d88"
+}

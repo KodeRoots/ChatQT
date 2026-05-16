@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "files": {
+    "src/qml/logic/SkillManager.js": {
+      "latest": {
+        "commit": "2c0d68a",
+        "timestamp": "2026-05-16T19:26:04.878Z",
+        "mi": 30.9,
+        "cognitive": 74,
+        "nesting": 4,
+        "lines": 142,
+        "maxCyclomatic": 19,
+        "entropy": 5.42
+      },
+      "history": [
+        {
+          "commit": "2c0d68a",
+          "timestamp": "2026-05-16T19:26:04.878Z",
+          "mi": 30.9,
+          "cognitive": 74,
+          "nesting": 4,
+          "lines": 142,
+          "maxCyclomatic": 19,
+          "entropy": 5.42
+        }
+      ],
+      "trend": "stable"
+    }
+  },
+  "capturedAt": "2026-05-16T19:26:09.877Z"
+}

@@ -663,11 +663,31 @@ Kirigami.Page {
         isStreaming = false;
     }
 
+    function buildSystemMessage() {
+        var skills = SkillScanner.discoverSkills(appSettings.getSkillFolders())
+        var agentContent = ""
+        if (appSettings.agentFilePath && appSettings.agentFilePath !== "") {
+            agentContent = SkillScanner.readFile(appSettings.agentFilePath)
+        }
+        return SkillScanner.buildSystemMessage(skills, agentContent || "")
+    }
+
+    function ensureSystemMessage() {
+        if (promptArray.length > 0 && promptArray[0].role === "system") return
+
+        var sysMsg = buildSystemMessage()
+        if (sysMsg && sysMsg !== "") {
+            promptArray.unshift({ "role": "system", "content": sysMsg })
+        }
+    }
+
     function sendMessage(prompt) {
         if (!prompt.trim() || isLoading) return;
 
         lastSentMessage = prompt;
         isStreaming = false;
+
+        ensureSystemMessage()
 
         if (currentSessionId === "") {
             var providerName = currentProvider

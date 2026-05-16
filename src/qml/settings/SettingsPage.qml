@@ -45,8 +45,13 @@ Kirigami.ScrollablePage {
     }
 
     Component {
-        id: mcpPage
-        SettingsMCP {}
+        id: skillsMcpPage
+        SettingsSkillsMCP {}
+    }
+
+    Component {
+        id: agentPage
+        SettingsAgent {}
     }
 
     FormCard.FormCard {
@@ -118,14 +123,26 @@ Kirigami.ScrollablePage {
             })
         }
 
-        FormCard.FormDelegateSeparator { above: opencodeButton; below: mcpButton }
+        FormCard.FormDelegateSeparator { above: opencodeButton; below: skillsMcpButton }
 
         FormCard.FormButtonDelegate {
-            id: mcpButton
-            text: i18nc("@action:button", "MCP Servers")
-            description: i18nc("@info:whatsthis", "Configure MCP servers for AI tool access")
+            id: skillsMcpButton
+            text: i18nc("@action:button", "Skills and MCPs")
+            description: i18nc("@info:whatsthis", "Configure skills folders and MCP servers")
             icon.name: "network-connect"
-            onClicked: Kirigami.PageStack.push(mcpPage, {
+            onClicked: Kirigami.PageStack.push(skillsMcpPage, {
+                settings: root.settings
+            })
+        }
+
+        FormCard.FormDelegateSeparator { above: skillsMcpButton; below: agentButton }
+
+        FormCard.FormButtonDelegate {
+            id: agentButton
+            text: i18nc("@action:button", "Agent")
+            description: i18nc("@info:whatsthis", "Configure agent instructions (AGENTS.md)")
+            icon.name: "user-identity"
+            onClicked: Kirigami.PageStack.push(agentPage, {
                 settings: root.settings
             })
         }

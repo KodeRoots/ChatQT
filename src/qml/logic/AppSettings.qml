@@ -31,6 +31,10 @@ QtObject {
     property string mcpToolResults: "{}"
     property bool mcpDefaultsInitialized: _settings.value("mcpDefaultsInitialized", false)
 
+    // Skills settings
+    property string skillFolders: _settings.value("skillFolders", JSON.stringify(["~/.skills", "~/.agents/skills"]))
+    property string agentFilePath: _settings.value("agentFilePath", "")
+
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
     property bool openclawEnabled: _settings.value("openclawEnabled", true)
@@ -152,6 +156,14 @@ QtObject {
         return null
     }
 
+    function getSkillFolders() {
+        try {
+            return JSON.parse(skillFolders)
+        } catch (e) {
+            return ["~/.skills", "~/.agents/skills"]
+        }
+    }
+
     function getMcpServers() {
         try {
             var servers = JSON.parse(mcpServers)
@@ -269,6 +281,8 @@ QtObject {
         _settings.setValue("lastActiveSessionId", lastActiveSessionId)
         _settings.setValue("mcpServers", mcpServers)
         _settings.setValue("mcpDefaultsInitialized", mcpDefaultsInitialized)
+        _settings.setValue("skillFolders", skillFolders)
+        _settings.setValue("agentFilePath", agentFilePath)
         _settings.sync()
     }
 
@@ -297,6 +311,8 @@ QtObject {
     onLastActiveSessionIdChanged: save()
     onMcpServersChanged: save()
     onMcpDefaultsInitializedChanged: save()
+    onSkillFoldersChanged: save()
+    onAgentFilePathChanged: save()
 
     Component.onCompleted: {
         ensureDefaultMcpServers()
