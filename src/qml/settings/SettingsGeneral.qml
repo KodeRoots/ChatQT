@@ -33,19 +33,7 @@ Kirigami.ScrollablePage {
             checked: root.settings ? root.settings.ollamaEnabled : true
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.ollamaEnabled = checked
-                }
-            }
-        }
-
-        QQC2.CheckBox {
-            id: openclawCheckBox
-            Kirigami.FormData.label: i18nc("@label:checkbox", "OpenClaw:")
-            text: i18nc("@option:check", "Enable OpenClaw provider")
-            checked: root.settings ? root.settings.openclawEnabled : true
-            onCheckedChanged: {
-                if (root.settings) {
-                    root.settings.openclawEnabled = checked
+                    root.settings.ollamaEnabled = checked;
                 }
             }
         }
@@ -57,7 +45,19 @@ Kirigami.ScrollablePage {
             checked: root.settings ? root.settings.openaiCompatibleEnabled : true
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.openaiCompatibleEnabled = checked
+                    root.settings.openaiCompatibleEnabled = checked;
+                }
+            }
+        }
+
+        QQC2.CheckBox {
+            id: openclawCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "OpenClaw:")
+            text: i18nc("@option:check", "Enable OpenClaw provider")
+            checked: root.settings ? root.settings.openclawEnabled : true
+            onCheckedChanged: {
+                if (root.settings) {
+                    root.settings.openclawEnabled = checked;
                 }
             }
         }
@@ -69,7 +69,19 @@ Kirigami.ScrollablePage {
             checked: root.settings ? root.settings.opencodeEnabled : true
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.opencodeEnabled = checked
+                    root.settings.opencodeEnabled = checked;
+                }
+            }
+        }
+
+        QQC2.CheckBox {
+            id: piCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Pi:")
+            text: i18nc("@option:check", "Enable Pi provider")
+            checked: root.settings ? root.settings.piEnabled : true
+            onCheckedChanged: {
+                if (root.settings) {
+                    root.settings.piEnabled = checked;
                 }
             }
         }
