@@ -40,11 +40,13 @@ QtObject {
     property bool openclawEnabled: _settings.value("openclawEnabled", true)
     property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
     property bool opencodeEnabled: _settings.value("opencodeEnabled", true)
+    property bool piEnabled: _settings.value("piEnabled", true)
 
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
     readonly property bool isOpenAICompatible: provider === "openai-compatible"
     readonly property bool isOpenCode: provider === "opencode"
+    readonly property bool isPi: provider === "pi"
 
     function getProviderDisplayName() {
         if (provider === "ollama") return "Ollama"
@@ -63,6 +65,7 @@ QtObject {
             return openaiCompatibleModel || "OpenAI"
         }
         if (provider === "opencode") return "OpenCode"
+        if (provider === "pi") return "Pi"
         return "ChatQT"
     }
 
@@ -275,6 +278,7 @@ QtObject {
         _settings.setValue("openclawEnabled", openclawEnabled)
         _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
         _settings.setValue("opencodeEnabled", opencodeEnabled)
+        _settings.setValue("piEnabled", piEnabled)
         _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
         _settings.setValue("openclawInstances", openclawInstances)
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
@@ -305,6 +309,7 @@ QtObject {
     onOpenclawEnabledChanged: save()
     onOpenaiCompatibleEnabledChanged: save()
     onOpencodeEnabledChanged: save()
+    onPiEnabledChanged: save()
     onSelectedOpenAICompatibleProviderIdChanged: save()
     onOpenclawInstancesChanged: save()
     onSelectedOpenClawInstanceIdChanged: save()

@@ -20,6 +20,7 @@
 
 #include "chatqt_version.h"
 #include "processmanager.h"
+#include "piprocessmanager.h"
 #include "sessionstore.h"
 #include "hotreload.h"
 #include "mcpprocessmanager.h"
@@ -54,6 +55,9 @@ int main(int argc, char *argv[])
 
     // Register ProcessManager as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
+
+    // Register PiProcessManager as singleton
+    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "PiProcessManager", PiProcessManager::instance());
 
     // Register SessionStore as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", SessionStore::instance());

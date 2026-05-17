@@ -45,6 +45,11 @@ Kirigami.ScrollablePage {
     }
 
     Component {
+        id: piPage
+        SettingsPi {}
+    }
+
+    Component {
         id: skillsMcpPage
         SettingsSkillsMCP {}
     }
@@ -87,7 +92,10 @@ Kirigami.ScrollablePage {
             })
         }
 
-        FormCard.FormDelegateSeparator { above: generalButton; below: openclawButton }
+        FormCard.FormDelegateSeparator {
+            above: generalButton
+            below: openclawButton
+        }
 
         FormCard.FormButtonDelegate {
             id: openclawButton
@@ -99,7 +107,10 @@ Kirigami.ScrollablePage {
             })
         }
 
-        FormCard.FormDelegateSeparator { above: openclawButton; below: openaiCompatibleButton }
+        FormCard.FormDelegateSeparator {
+            above: openclawButton
+            below: openaiCompatibleButton
+        }
 
         FormCard.FormButtonDelegate {
             id: openaiCompatibleButton
@@ -111,7 +122,10 @@ Kirigami.ScrollablePage {
             })
         }
 
-        FormCard.FormDelegateSeparator { above: openaiCompatibleButton; below: opencodeButton }
+        FormCard.FormDelegateSeparator {
+            above: openaiCompatibleButton
+            below: opencodeButton
+        }
 
         FormCard.FormButtonDelegate {
             id: opencodeButton
@@ -123,7 +137,25 @@ Kirigami.ScrollablePage {
             })
         }
 
-        FormCard.FormDelegateSeparator { above: opencodeButton; below: skillsMcpButton }
+        FormCard.FormDelegateSeparator {
+            above: opencodeButton
+            below: piButton
+        }
+
+        FormCard.FormButtonDelegate {
+            id: piButton
+            text: i18nc("@action:button", "Pi")
+            description: i18nc("@info:whatsthis", "Configure Pi (RPC mode)")
+            icon.name: "network-server"
+            onClicked: Kirigami.PageStack.push(piPage, {
+                settings: root.settings
+            })
+        }
+
+        FormCard.FormDelegateSeparator {
+            above: piButton
+            below: skillsMcpButton
+        }
 
         FormCard.FormButtonDelegate {
             id: skillsMcpButton
@@ -135,7 +167,10 @@ Kirigami.ScrollablePage {
             })
         }
 
-        FormCard.FormDelegateSeparator { above: skillsMcpButton; below: agentButton }
+        FormCard.FormDelegateSeparator {
+            above: skillsMcpButton
+            below: agentButton
+        }
 
         FormCard.FormButtonDelegate {
             id: agentButton

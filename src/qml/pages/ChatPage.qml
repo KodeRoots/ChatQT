@@ -90,7 +90,8 @@ Kirigami.Page {
     function buildProviderOptions() {
         var options = [
             { text: "Ollama", value: "ollama" },
-            { text: "OpenCode", value: "opencode" }
+            { text: "OpenCode", value: "opencode" },
+            { text: "Pi", value: "pi" }
         ]
 
         if (appSettings && appSettings.openclawEnabled) {
@@ -130,6 +131,7 @@ Kirigami.Page {
             case "openclaw": return appSettings.openclawEnabled
             case "openai-compatible": return appSettings.openaiCompatibleEnabled
             case "opencode": return appSettings.opencodeEnabled
+            case "pi": return appSettings.piEnabled
             default: return true
         }
     })
@@ -210,6 +212,8 @@ Kirigami.Page {
         } else if (currentProvider.startsWith("openai-compatible")) {
             var openaiProvider = appSettings.getSelectedOpenAICompatibleProvider()
             return openaiProvider && openaiProvider.url && openaiProvider.token && openaiProvider.model;
+        } else if (provider === "pi") {
+            return PiProcessManager.running;
         }
         return false;
     }
@@ -223,6 +227,8 @@ Kirigami.Page {
             return i18n("OpenCode not configured.\nPlease set URL, Username, Password and Model in settings.");
         } else if (currentProvider.startsWith("openai-compatible")) {
             return i18n("OpenAI Compatible provider not configured.\nPlease configure it in settings.");
+        } else if (currentProvider === "pi") {
+            return i18n("Pi is not running.\nPlease start it in Settings or check the binary path.");
         }
         return i18n("Provider not configured.");
     }
@@ -595,6 +601,14 @@ Kirigami.Page {
                 handleStreaming,
                 handleRequestComplete
             )
+        } else if (currentProvider === "pi") {
+            activeXhr = PiClient.requestPi(
+                PiProcessManager,
+                promptArray,
+                listModel,
+                handleStreaming,
+                handleRequestComplete
+            )
         }
     }
 
@@ -608,6 +622,8 @@ Kirigami.Page {
             ApiClient.abortActiveRequest();
         } else if (currentProvider === "opencode") {
             OpenCodeClient.abortActiveRequest();
+        } else if (currentProvider === "pi") {
+            PiClient.abortActiveRequest();
         }
         activeXhr = null;
 
@@ -643,6 +659,8 @@ Kirigami.Page {
             ApiClient.abortActiveRequest();
         } else if (currentProvider === "opencode") {
             OpenCodeClient.abortActiveRequest();
+        } else if (currentProvider === "pi") {
+            PiClient.abortActiveRequest();
         }
         activeXhr = null;
 
@@ -798,6 +816,14 @@ Kirigami.Page {
                 handleStreaming,
                 handleRequestComplete
             );
+        } else if (currentProvider === "pi") {
+            activeXhr = PiClient.requestPi(
+                PiProcessManager,
+                promptArray,
+                listModel,
+                handleStreaming,
+                handleRequestComplete
+            );
         }
     }
 
@@ -852,6 +878,8 @@ Kirigami.Page {
             return model || "OpenAI Compatible";
         } else if (provider === "opencode") {
             return "OpenCode";
+        } else if (provider === "pi") {
+            return "Pi";
         }
         return provider;
     }
@@ -930,6 +958,10 @@ Kirigami.Page {
 
         if (currentProvider === "ollama") {
             getModels();
+        }
+
+        if (currentProvider === "pi" && PiProcessManager.autoStart) {
+            PiProcessManager.start();
         }
         messageInput.focusInput();
         refreshSessionList();
@@ -1060,6 +1092,14 @@ Kirigami.Page {
             visible: currentProvider === "opencode" && !ProcessManager.running
             type: Kirigami.MessageType.Warning
             text: ProcessManager.lastError || i18n("OpenCode server is not running. Start it in Settings.")
+        }
+
+        Kirigami.InlineMessage {
+            Layout.margins: Kirigami.Units.smallSpacing
+            Layout.fillWidth: true
+            visible: currentProvider === "pi" && !PiProcessManager.running
+            type: Kirigami.MessageType.Warning
+            text: PiProcessManager.lastError || i18n("Pi is not running. Start it in Settings.")
         }
 
         ListView {
