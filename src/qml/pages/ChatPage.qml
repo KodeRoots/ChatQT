@@ -899,6 +899,35 @@ Kirigami.Page {
     }
 
     Component.onCompleted: {
+        if (currentProvider === "openclaw") {
+            if (appSettings.selectedOpenClawInstanceId) {
+                currentProvider = "openclaw:" + appSettings.selectedOpenClawInstanceId
+            } else {
+                var instances = appSettings.getOpenClawInstances()
+                for (var i = 0; i < instances.length; i++) {
+                    if (instances[i].enabled) {
+                        currentProvider = "openclaw:" + instances[i].id
+                        appSettings.selectedOpenClawInstanceId = instances[i].id
+                        break
+                    }
+                }
+            }
+        }
+        if (currentProvider === "openai-compatible") {
+            if (appSettings.selectedOpenAICompatibleProviderId) {
+                currentProvider = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
+            } else {
+                var providers = appSettings.getOpenaiCompatibleProviders()
+                for (var i = 0; i < providers.length; i++) {
+                    if (providers[i].enabled) {
+                        currentProvider = "openai-compatible:" + providers[i].id
+                        appSettings.selectedOpenAICompatibleProviderId = providers[i].id
+                        break
+                    }
+                }
+            }
+        }
+
         if (currentProvider === "ollama") {
             getModels();
         }
