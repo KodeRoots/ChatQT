@@ -37,10 +37,16 @@ QtObject {
 
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
-    property bool openclawEnabled: _settings.value("openclawEnabled", false)
+    property bool experimentalFeatures: typeof experimentalFeaturesEnabled !== 'undefined' ? experimentalFeaturesEnabled : false
+
+    property bool _openclawEnabledStored: _settings.value("openclawEnabled", false)
+    property bool _opencodeEnabledStored: _settings.value("opencodeEnabled", false)
+    property bool _piEnabledStored: _settings.value("piEnabled", false)
+
+    property bool openclawEnabled: experimentalFeatures && _openclawEnabledStored
     property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
-    property bool opencodeEnabled: _settings.value("opencodeEnabled", false)
-    property bool piEnabled: _settings.value("piEnabled", false)
+    property bool opencodeEnabled: experimentalFeatures && _opencodeEnabledStored
+    property bool piEnabled: experimentalFeatures && _piEnabledStored
 
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
@@ -275,10 +281,10 @@ QtObject {
         _settings.setValue("opencodePassword", opencodePassword)
         _settings.setValue("opencodeModel", opencodeModel)
         _settings.setValue("ollamaEnabled", ollamaEnabled)
-        _settings.setValue("openclawEnabled", openclawEnabled)
+        _settings.setValue("openclawEnabled", _openclawEnabledStored)
         _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
-        _settings.setValue("opencodeEnabled", opencodeEnabled)
-        _settings.setValue("piEnabled", piEnabled)
+        _settings.setValue("opencodeEnabled", _opencodeEnabledStored)
+        _settings.setValue("piEnabled", _piEnabledStored)
         _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
         _settings.setValue("openclawInstances", openclawInstances)
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)

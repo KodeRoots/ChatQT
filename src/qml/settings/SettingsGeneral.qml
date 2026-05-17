@@ -52,36 +52,39 @@ Kirigami.ScrollablePage {
 
         QQC2.CheckBox {
             id: openclawCheckBox
+            visible: root.settings && root.settings.experimentalFeatures
             Kirigami.FormData.label: i18nc("@label:checkbox", "OpenClaw:")
             text: i18nc("@option:check", "Enable OpenClaw provider")
-            checked: root.settings ? root.settings.openclawEnabled : true
+            checked: root.settings ? root.settings._openclawEnabledStored : false
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.openclawEnabled = checked;
+                    root.settings._openclawEnabledStored = checked;
                 }
             }
         }
 
         QQC2.CheckBox {
             id: opencodeCheckBox
+            visible: root.settings && root.settings.experimentalFeatures
             Kirigami.FormData.label: i18nc("@label:checkbox", "OpenCode:")
             text: i18nc("@option:check", "Enable OpenCode provider")
-            checked: root.settings ? root.settings.opencodeEnabled : true
+            checked: root.settings ? root.settings._opencodeEnabledStored : false
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.opencodeEnabled = checked;
+                    root.settings._opencodeEnabledStored = checked;
                 }
             }
         }
 
         QQC2.CheckBox {
             id: piCheckBox
+            visible: root.settings && root.settings.experimentalFeatures
             Kirigami.FormData.label: i18nc("@label:checkbox", "Pi:")
             text: i18nc("@option:check", "Enable Pi provider")
-            checked: root.settings ? root.settings.piEnabled : true
+            checked: root.settings ? root.settings._piEnabledStored : false
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings.piEnabled = checked;
+                    root.settings._piEnabledStored = checked;
                 }
             }
         }

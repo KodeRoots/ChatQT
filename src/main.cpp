@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+    engine.rootContext()->setContextProperty(QStringLiteral("experimentalFeaturesEnabled"),
+        !qEnvironmentVariableIsEmpty("CHATQT_ENABLE_EXPERIMENTAL_FEATURES"));
 
     // Register ProcessManager as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
