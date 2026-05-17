@@ -463,10 +463,26 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
         }
 
-        Kirigami.Heading {
-            level: 2
-            text: i18nc("@title:group", "Skill Folders")
+        RowLayout {
             Layout.fillWidth: true
+
+            Kirigami.Heading {
+                level: 2
+                text: i18nc("@title:group", "Skill Folders")
+                Layout.fillWidth: true
+            }
+
+            QQC2.ToolButton {
+                icon.name: "list-add-symbolic"
+                display: QQC2.AbstractButton.IconOnly
+                text: i18nc("@action:button", "Add Skill Folder")
+                onClicked: folderDialog.open()
+
+                QQC2.ToolTip {
+                    text: parent.text
+                    delay: Kirigami.Units.toolTipDelay
+                }
+            }
         }
 
         ColumnLayout {
@@ -660,11 +676,27 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
         }
 
-        Kirigami.Heading {
+        RowLayout {
             visible: serversModel.count > 0
-            level: 2
-            text: i18nc("@title:group", "MCP Servers")
             Layout.fillWidth: true
+
+            Kirigami.Heading {
+                level: 2
+                text: i18nc("@title:group", "MCP Servers")
+                Layout.fillWidth: true
+            }
+
+            QQC2.ToolButton {
+                icon.name: "list-add-symbolic"
+                display: QQC2.AbstractButton.IconOnly
+                text: i18nc("@action:button", "Add MCP Server")
+                onClicked: editSheet.openNewServer()
+
+                QQC2.ToolTip {
+                    text: parent.text
+                    delay: Kirigami.Units.toolTipDelay
+                }
+            }
         }
 
         ColumnLayout {
