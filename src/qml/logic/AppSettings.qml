@@ -37,10 +37,10 @@ QtObject {
 
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
-    property bool openclawEnabled: _settings.value("openclawEnabled", true)
+    property bool openclawEnabled: _settings.value("openclawEnabled", false)
     property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
-    property bool opencodeEnabled: _settings.value("opencodeEnabled", true)
-    property bool piEnabled: _settings.value("piEnabled", true)
+    property bool opencodeEnabled: _settings.value("opencodeEnabled", false)
+    property bool piEnabled: _settings.value("piEnabled", false)
 
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
