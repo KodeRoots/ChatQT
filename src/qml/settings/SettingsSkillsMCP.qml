@@ -18,6 +18,7 @@ Kirigami.ScrollablePage {
     title: i18nc("@title", "Skills and MCP Servers")
 
     property var settings: null
+    property bool skillsExpanded: false
 
     ListModel {
         id: skillFoldersModel
@@ -538,71 +539,113 @@ Kirigami.ScrollablePage {
             Layout.fillWidth: true
         }
 
-        Kirigami.Heading {
-            level: 2
-            text: i18nc("@title:group", "Discovered Skills")
+        RowLayout {
             Layout.fillWidth: true
-        }
-
-        QQC2.Label {
-            visible: discoveredSkillsModel.count === 0
-            text: i18nc("@info", "No skills found. Add folders containing SKILL.md files.")
-            font: Kirigami.Theme.smallFont
-            color: Kirigami.Theme.disabledTextColor
-            wrapMode: Text.WordWrap
-            Layout.fillWidth: true
-        }
-
-        ColumnLayout {
-            Layout.fillWidth: true
-            visible: discoveredSkillsModel.count > 0
             spacing: Kirigami.Units.smallSpacing
 
-            Repeater {
-                model: discoveredSkillsModel
-                delegate: Kirigami.AbstractCard {
-                    Layout.fillWidth: true
+            QQC2.ToolButton {
+                icon.name: skillsExpanded ? "go-down-symbolic" : "go-next-symbolic"
+                display: QQC2.AbstractButton.IconOnly
+                text: skillsExpanded ? i18nc("@action:button", "Collapse") : i18nc("@action:button", "Expand")
+                onClicked: skillsExpanded = !skillsExpanded
+                Layout.alignment: Qt.AlignVCenter
 
-                    contentItem: ColumnLayout {
-                        spacing: Kirigami.Units.smallSpacing
+                QQC2.ToolTip {
+                    text: parent.text
+                    delay: Kirigami.Units.toolTipDelay
+                }
+            }
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: Kirigami.Units.smallSpacing
+            Kirigami.Heading {
+                level: 2
+                text: i18nc("@title:group", "Discovered Skills")
+                Layout.fillWidth: true
+            }
 
-                            Kirigami.Heading {
-                                level: 3
-                                text: model.skillName
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                            }
+            Rectangle {
+                visible: discoveredSkillsModel.count > 0
+                radius: Kirigami.Units.smallSpacing
+                height: Kirigami.Units.gridUnit * 1.2
+                width: skillCountLabel.width + Kirigami.Units.smallSpacing * 2
+                color: Kirigami.Theme.positiveTextColor
+                Layout.alignment: Qt.AlignVCenter
 
-                            QQC2.Label {
-                                text: model.skillDirName
-                                font: Kirigami.Theme.smallFont
-                                color: Kirigami.Theme.disabledTextColor
-                            }
-                        }
-
-                        QQC2.Label {
-                            visible: model.skillDescription !== ""
-                            text: model.skillDescription
-                            font: Kirigami.Theme.smallFont
-                            color: Kirigami.Theme.disabledTextColor
-                            wrapMode: Text.WordWrap
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                        }
-                    }
+                QQC2.Label {
+                    id: skillCountLabel
+                    anchors.centerIn: parent
+                    text: discoveredSkillsModel.count
+                    font.bold: true
+                    font.pointSize: Kirigami.Theme.smallFont.pointSize
+                    color: Kirigami.Theme.backgroundColor
                 }
             }
         }
 
-        QQC2.Button {
-            text: i18nc("@action:button", "Rescan Skills")
-            icon.name: "view-refresh-symbolic"
+        ColumnLayout {
             Layout.fillWidth: true
-            onClicked: root.scanSkills()
+            visible: skillsExpanded
+            spacing: Kirigami.Units.smallSpacing
+
+            QQC2.Label {
+                visible: discoveredSkillsModel.count === 0
+                text: i18nc("@info", "No skills found. Add folders containing SKILL.md files.")
+                font: Kirigami.Theme.smallFont
+                color: Kirigami.Theme.disabledTextColor
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+
+            ColumnLayout {
+                Layout.fillWidth: true
+                visible: discoveredSkillsModel.count > 0
+                spacing: Kirigami.Units.smallSpacing
+
+                Repeater {
+                    model: discoveredSkillsModel
+                    delegate: Kirigami.AbstractCard {
+                        Layout.fillWidth: true
+
+                        contentItem: ColumnLayout {
+                            spacing: Kirigami.Units.smallSpacing
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Kirigami.Units.smallSpacing
+
+                                Kirigami.Heading {
+                                    level: 3
+                                    text: model.skillName
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                }
+
+                                QQC2.Label {
+                                    text: model.skillDirName
+                                    font: Kirigami.Theme.smallFont
+                                    color: Kirigami.Theme.disabledTextColor
+                                }
+                            }
+
+                            QQC2.Label {
+                                visible: model.skillDescription !== ""
+                                text: model.skillDescription
+                                font: Kirigami.Theme.smallFont
+                                color: Kirigami.Theme.disabledTextColor
+                                wrapMode: Text.WordWrap
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+            }
+
+            QQC2.Button {
+                text: i18nc("@action:button", "Rescan Skills")
+                icon.name: "view-refresh-symbolic"
+                Layout.fillWidth: true
+                onClicked: root.scanSkills()
+            }
         }
 
         Kirigami.Separator {

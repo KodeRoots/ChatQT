@@ -12,7 +12,7 @@ import org.kde.kirigami as Kirigami
 import org.kde.chatqt
 import org.koderoots.chatqt
 
-Kirigami.ScrollablePage {
+Kirigami.Page {
     id: root
 
     title: i18nc("@title", "Agent")
