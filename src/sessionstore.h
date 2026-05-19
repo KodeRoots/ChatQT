@@ -35,6 +35,7 @@ public:
     Q_INVOKABLE bool updateSessionProvider(const QString &sessionId, const QString &provider, const QString &model);
     Q_INVOKABLE bool addMessage(const QString &sessionId, const QString &role, const QString &content, const QString &thinkingContent = QString());
     Q_INVOKABLE bool updateLastAssistantMessage(const QString &sessionId, const QString &content, const QString &thinkingContent = QString());
+    Q_INVOKABLE bool markLastAssistantAsError(const QString &sessionId);
     Q_INVOKABLE bool finalizeLastAssistantMessage(const QString &sessionId, const QString &content, const QString &thinkingContent = QString());
     Q_INVOKABLE QVariantList loadSession(const QString &sessionId) const;
     Q_INVOKABLE QVariantMap getLastMessage(const QString &sessionId) const;

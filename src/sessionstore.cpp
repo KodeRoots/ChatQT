@@ -325,6 +325,22 @@ bool SessionStore::updateLastAssistantMessage(const QString &sessionId, const QS
     return true;
 }
 
+bool SessionStore::markLastAssistantAsError(const QString &sessionId)
+{
+    QSqlQuery query(m_db);
+    query.prepare(QStringLiteral(
+        "UPDATE messages SET role = 'error' "
+        "WHERE session_id = ? AND role = 'assistant' "
+        "ORDER BY created_at DESC LIMIT 1"
+    ));
+    query.addBindValue(sessionId);
+
+    if (!executeQuery(query)) {
+        return false;
+    }
+    return true;
+}
+
 bool SessionStore::finalizeLastAssistantMessage(const QString &sessionId, const QString &content, const QString &thinkingContent)
 {
     QSqlQuery findQuery(m_db);

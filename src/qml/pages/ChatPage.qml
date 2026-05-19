@@ -275,6 +275,9 @@ Kirigami.Page {
             listModel.setProperty(oldLength, "isError", true);
             listModel.setProperty(oldLength, "name", "Error");
             listModel.setProperty(oldLength, "thinkingContent", "");
+            if (currentSessionId !== "") {
+                SessionStore.markLastAssistantAsError(currentSessionId);
+            }
             isLoading = false;
             activeXhr = null;
             isStreaming = false;
@@ -917,7 +920,11 @@ Kirigami.Page {
         var messages = SessionStore.loadSession(sessionId);
         for (var i = 0; i < messages.length; i++) {
             var msg = messages[i];
-            var roleName = msg.role === "user" ? "User" : "Assistant";
+            var roleName;
+            if (msg.role === "user") roleName = "User";
+            else if (msg.role === "error") roleName = "Error";
+            else roleName = "Assistant";
+
             listModelController.append({
                 "name": roleName,
                 "content": msg.content,
