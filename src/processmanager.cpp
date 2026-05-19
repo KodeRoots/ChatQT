@@ -13,6 +13,7 @@
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include "flatpakutils.h"
 
 ProcessManager* ProcessManager::instance()
 {
@@ -202,14 +203,17 @@ void ProcessManager::start()
         return;
     }
 
-    QFileInfo binaryInfo(m_binaryPath);
-    if (!binaryInfo.exists()) {
-        setLastError(i18n("OpenCode binary not found at: %1").arg(m_binaryPath));
-        return;
-    }
-
-    if (!binaryInfo.isExecutable()) {
-        setLastError(i18n("OpenCode binary is not executable: %1").arg(m_binaryPath));
+    if (!FlatpakUtils::isHostBinaryValid(m_binaryPath)) {
+        if (FlatpakUtils::isInsideFlatpak()) {
+            setLastError(i18n("OpenCode binary path must be an absolute path. Current: %1").arg(m_binaryPath));
+        } else {
+            QFileInfo binaryInfo(m_binaryPath);
+            if (!binaryInfo.exists()) {
+                setLastError(i18n("OpenCode binary not found at: %1").arg(m_binaryPath));
+            } else {
+                setLastError(i18n("OpenCode binary is not executable: %1").arg(m_binaryPath));
+            }
+        }
         return;
     }
 
@@ -271,10 +275,16 @@ void ProcessManager::launchProcess()
 
     m_process->setProcessEnvironment(env);
     m_process->setWorkingDirectory(QDir::homePath());
-    m_process->setProgram(m_binaryPath);
-    m_process->setArguments({QStringLiteral("serve"),
+
+    QString program = m_binaryPath;
+    QStringList args = {QStringLiteral("serve"),
         QStringLiteral("--hostname"), m_host,
-        QStringLiteral("--port"), QString::number(m_port)});
+        QStringLiteral("--port"), QString::number(m_port)};
+
+    FlatpakUtils::prepareHostCommand(program, args);
+
+    m_process->setProgram(program);
+    m_process->setArguments(args);
 
     m_process->start();
 }
@@ -302,6 +312,17 @@ bool ProcessManager::autoDetectBinary()
         QStringLiteral("/usr/local/bin/opencode"),
         QStringLiteral("/opt/opencode/opencode")
     };
+
+    if (FlatpakUtils::isInsideFlatpak()) {
+        QStringList resolved = FlatpakUtils::hostAutoDetect(searchPaths);
+        for (const QString &path : resolved) {
+            setBinaryPath(path);
+            addLog(QStringLiteral("Auto-detected OpenCode binary on host at: %1").arg(path));
+            return true;
+        }
+        addLog(QStringLiteral("Could not auto-detect OpenCode binary on host"));
+        return false;
+    }
 
     for (const QString &path : searchPaths) {
         QFileInfo info(path);
@@ -335,20 +356,12 @@ void ProcessManager::regeneratePassword()
 
 bool ProcessManager::isBinaryValid() const
 {
-    if (m_binaryPath.isEmpty()) {
-        return false;
-    }
-    QFileInfo info(m_binaryPath);
-    return info.exists() && info.isExecutable();
+    return FlatpakUtils::isHostBinaryValid(m_binaryPath);
 }
 
 bool ProcessManager::validateBinaryPath(const QString &path) const
 {
-    if (path.isEmpty()) {
-        return false;
-    }
-    QFileInfo info(path);
-    return info.exists() && info.isExecutable();
+    return FlatpakUtils::isHostBinaryValid(path);
 }
 
 void ProcessManager::onProcessStarted()

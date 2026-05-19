@@ -8,6 +8,7 @@
 #include <QStandardPaths>
 #include <QDateTime>
 #include <KLocalizedString>
+#include "flatpakutils.h"
 
 PiProcessManager* PiProcessManager::instance()
 {
@@ -110,14 +111,17 @@ void PiProcessManager::start()
         return;
     }
 
-    QFileInfo binaryInfo(m_binaryPath);
-    if (!binaryInfo.exists()) {
-        setLastError(i18n("Pi binary not found at: %1").arg(m_binaryPath));
-        return;
-    }
-
-    if (!binaryInfo.isExecutable()) {
-        setLastError(i18n("Pi binary is not executable: %1").arg(m_binaryPath));
+    if (!FlatpakUtils::isHostBinaryValid(m_binaryPath)) {
+        if (FlatpakUtils::isInsideFlatpak()) {
+            setLastError(i18n("Pi binary path must be an absolute path. Current: %1").arg(m_binaryPath));
+        } else {
+            QFileInfo binaryInfo(m_binaryPath);
+            if (!binaryInfo.exists()) {
+                setLastError(i18n("Pi binary not found at: %1").arg(m_binaryPath));
+            } else {
+                setLastError(i18n("Pi binary is not executable: %1").arg(m_binaryPath));
+            }
+        }
         return;
     }
 
@@ -128,8 +132,14 @@ void PiProcessManager::start()
     setIsStreaming(false);
 
     m_process->setWorkingDirectory(QDir::homePath());
-    m_process->setProgram(m_binaryPath);
-    m_process->setArguments({QStringLiteral("--mode"), QStringLiteral("rpc"), QStringLiteral("--no-session")});
+
+    QString program = m_binaryPath;
+    QStringList args = {QStringLiteral("--mode"), QStringLiteral("rpc"), QStringLiteral("--no-session")};
+
+    FlatpakUtils::prepareHostCommand(program, args);
+
+    m_process->setProgram(program);
+    m_process->setArguments(args);
 
     m_process->start();
 }
@@ -166,6 +176,17 @@ bool PiProcessManager::autoDetectBinary()
         QStringLiteral("/usr/local/bin/pi")
     };
 
+    if (FlatpakUtils::isInsideFlatpak()) {
+        QStringList resolved = FlatpakUtils::hostAutoDetect(searchPaths);
+        for (const QString &path : resolved) {
+            setBinaryPath(path);
+            addLog(QStringLiteral("Auto-detected Pi binary on host at: %1").arg(path));
+            return true;
+        }
+        addLog(QStringLiteral("Could not auto-detect Pi binary on host"));
+        return false;
+    }
+
     QProcess whichProcess;
     whichProcess.start(QStringLiteral("which"), {QStringLiteral("pi")});
     if (whichProcess.waitForFinished(3000)) {
@@ -193,20 +214,12 @@ bool PiProcessManager::autoDetectBinary()
 
 bool PiProcessManager::isBinaryValid() const
 {
-    if (m_binaryPath.isEmpty()) {
-        return false;
-    }
-    QFileInfo info(m_binaryPath);
-    return info.exists() && info.isExecutable();
+    return FlatpakUtils::isHostBinaryValid(m_binaryPath);
 }
 
 bool PiProcessManager::validateBinaryPath(const QString &path) const
 {
-    if (path.isEmpty()) {
-        return false;
-    }
-    QFileInfo info(path);
-    return info.exists() && info.isExecutable();
+    return FlatpakUtils::isHostBinaryValid(path);
 }
 
 void PiProcessManager::sendCommand(const QString &jsonCommand)

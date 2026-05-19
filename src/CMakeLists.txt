@@ -17,6 +17,7 @@ target_sources(chatqt
     hotreload.cpp
     mcpprocessmanager.cpp
     skillscanner.cpp
+    flatpakutils.cpp
 )
 
 ecm_target_qml_sources(chatqt

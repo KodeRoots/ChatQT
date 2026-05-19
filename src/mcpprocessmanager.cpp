@@ -7,6 +7,7 @@
 
 #include <QDir>
 #include <QStandardPaths>
+#include "flatpakutils.h"
 
 McpProcess::McpProcess(const QString &serverId, const QString &command,
                        const QStringList &args, const QVariantMap &env,
@@ -64,7 +65,12 @@ void McpProcess::start()
     m_initialized = false;
     setStatus(QStringLiteral("connecting"));
 
-    m_process->start(m_command, m_args);
+    QString program = m_command;
+    QStringList args = m_args;
+
+    FlatpakUtils::prepareHostCommand(program, args);
+
+    m_process->start(program, args);
 }
 
 void McpProcess::stop()
