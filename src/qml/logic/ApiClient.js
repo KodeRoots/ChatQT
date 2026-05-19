@@ -25,10 +25,14 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
     let requestData = {
         "model": modelsComboboxCurrentValue,
         "keep_alive": "5m",
+        "stream": true,
         "options": {},
-        "think": thinkingEnabled !== false,
         "messages": promptArray
     };
+
+    if (thinkingEnabled === true) {
+        requestData["think"] = true;
+    }
 
     if (mcpFunctions && mcpFunctions.length > 0) {
         requestData["tools"] = mcpFunctions.map(function(f) {
@@ -57,6 +61,8 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
     let toolCalls = {};
     let hasToolCalls = false;
 
+    let errorDetected = false;
+
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
             const response = xhr.responseText;
@@ -74,6 +80,14 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
 
                     try {
                         const parsedObject = JSON.parse(line);
+
+                        if (parsedObject.error) {
+                            errorDetected = true;
+                            accumulatedText = parsedObject.error;
+                            hasUpdate = true;
+                            continue;
+                        }
+
                         const content = parsedObject?.message?.content;
                         const thinking = parsedObject?.message?.thinking;
                         const msgToolCalls = parsedObject?.message?.tool_calls;
@@ -135,8 +149,19 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
 
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (typeof onComplete === 'function') {
+                if (xhr.status !== 200 && !errorDetected && accumulatedText === '') {
+                    accumulatedText = 'Ollama error: HTTP ' + xhr.status;
+                    if (xhr.responseText) {
+                        try {
+                            const errObj = JSON.parse(xhr.responseText);
+                            if (errObj.error) {
+                                accumulatedText = errObj.error;
+                            }
+                        } catch (e) {}
+                    }
+                }
                 let finalToolCalls = [];
-                if (hasToolCalls) {
+                if (hasToolCalls && !errorDetected) {
                     let tcKeys = Object.keys(toolCalls);
                     for (let k = 0; k < tcKeys.length; k++) {
                         finalToolCalls.push(toolCalls[tcKeys[k]]);
