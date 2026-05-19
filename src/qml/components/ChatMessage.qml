@@ -16,6 +16,7 @@ Kirigami.AbstractCard {
     property string thinkingText: ""
     property bool thinkingExpanded: false
     property bool isToolMessage: false
+    property bool isErrorMessage: false
 
     readonly property bool isUser: senderName === "User"
 
@@ -27,10 +28,11 @@ Kirigami.AbstractCard {
         spacing: Kirigami.Units.smallSpacing
 
         Controls.Label {
-            text: senderName
+            text: root.isErrorMessage ? i18n("Error") : senderName
             font.weight: Font.Bold
             font.pointSize: Kirigami.Theme.smallFont.pointSize
             color: {
+                if (root.isErrorMessage) return Kirigami.Theme.negativeTextColor
                 if (isToolMessage) return Kirigami.Theme.neutralTextColor
                 if (isUser) return Kirigami.Theme.disabledTextColor
                 return Kirigami.Theme.textColor
@@ -102,7 +104,7 @@ Kirigami.AbstractCard {
             wrapMode: TextEdit.WordWrap
             text: root.messageText
             textFormat: TextEdit.MarkdownText
-            color: Kirigami.Theme.textColor
+            color: root.isErrorMessage ? Kirigami.Theme.negativeTextColor : Kirigami.Theme.textColor
             selectByMouse: true
 
             onLinkActivated: function(link) {

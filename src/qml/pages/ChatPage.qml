@@ -244,7 +244,8 @@ Kirigami.Page {
             listModel.append({
                 "name": "Assistant",
                 "content": text,
-                "thinkingContent": thinkingText !== undefined ? thinkingText : ""
+                "thinkingContent": thinkingText !== undefined ? thinkingText : "",
+                "isError": false
             });
             if (currentSessionId !== "") {
                 SessionStore.addMessage(currentSessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
@@ -263,6 +264,23 @@ Kirigami.Page {
 
     function handleRequestComplete(oldLength, listModel, finalText, toolCalls) {
         if (activeXhr === null && mcpToolCallDepth === 0) return;
+
+        var isOllamaError = currentProvider === "ollama" && finalText && (
+            finalText.indexOf("does not support") !== -1 ||
+            finalText.indexOf("Ollama error") !== -1 ||
+            finalText.startsWith("{\"error\"")
+        )
+
+        if (isOllamaError && listModel.count > oldLength) {
+            listModel.setProperty(oldLength, "isError", true);
+            listModel.setProperty(oldLength, "name", "Error");
+            listModel.setProperty(oldLength, "thinkingContent", "");
+            isLoading = false;
+            activeXhr = null;
+            isStreaming = false;
+            mcpToolCallDepth = 0;
+            return;
+        }
 
         if (toolCalls && toolCalls.length > 0 && mcpToolCallDepth < mcpMaxToolCallDepth) {
             handleMcpToolCalls(oldLength, listModel, finalText, toolCalls)
@@ -1133,6 +1151,7 @@ Kirigami.Page {
                 senderName: name
                 thinkingText: thinkingContent || ""
                 isToolMessage: name === "Tool"
+                isErrorMessage: name === "Error"
             }
 
             Controls.ScrollBar.vertical: Controls.ScrollBar {
