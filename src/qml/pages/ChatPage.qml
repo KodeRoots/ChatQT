@@ -920,9 +920,16 @@ Kirigami.Page {
         var messages = SessionStore.loadSession(sessionId);
         for (var i = 0; i < messages.length; i++) {
             var msg = messages[i];
+            var isErr = msg.role === "error" || (
+                msg.role === "assistant" && msg.content && (
+                    msg.content.indexOf("does not support") !== -1 ||
+                    msg.content.indexOf("Ollama error") !== -1 ||
+                    msg.content.startsWith("{\"error\"")
+                )
+            );
             var roleName;
             if (msg.role === "user") roleName = "User";
-            else if (msg.role === "error") roleName = "Error";
+            else if (isErr) roleName = "Error";
             else roleName = "Assistant";
 
             listModelController.append({
