@@ -149,8 +149,6 @@ Kirigami.Page {
     function switchProvider(newProvider) {
         if (newProvider === appSettings.provider) return;
 
-        clearChat();
-
         if (newProvider.startsWith("openai-compatible:")) {
             var providerId = newProvider.substring("openai-compatible:".length)
             appSettings.selectedOpenAICompatibleProviderId = providerId
