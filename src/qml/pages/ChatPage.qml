@@ -913,6 +913,17 @@ Kirigami.Page {
         var sessionInfo = SessionStore.getSession(sessionId);
         if (!sessionInfo || !sessionInfo.id) return;
 
+        var sessionProvider = sessionInfo.provider || ""
+        var sessionModel = sessionInfo.model || ""
+
+        if (sessionProvider !== "") {
+            switchProvider(sessionProvider)
+        }
+
+        if (currentProvider === "ollama" && sessionModel !== "" && sessionModel !== currentModel) {
+            currentModel = sessionModel
+        }
+
         listModelController.clear();
         promptArray = [];
         OpenCodeClient.resetSession();

@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
 import org.koderoots.chatqt
 
@@ -36,5 +37,53 @@ Kirigami.ApplicationWindow {
 
     pageStack.initialPage: ChatPage {
         id: chatPage
+    }
+
+    onClosing: function(close) {
+        close.accepted = false
+        root.hide()
+    }
+
+    Platform.SystemTrayIcon {
+        id: systemTray
+
+        visible: true
+        icon.name: "org.koderoots.chatqt"
+
+        tooltip: i18n("ChatQT")
+
+        Component.onCompleted: {
+            if (systemTray.supportsMessages) {
+                systemTray.showMessage(i18n("ChatQT"), i18n("ChatQT is running in the system tray"))
+            }
+        }
+
+        menu: Platform.Menu {
+            Platform.MenuItem {
+                text: i18n("Show ChatQT")
+                onTriggered: {
+                    root.show()
+                    root.raise()
+                }
+            }
+
+            Platform.MenuSeparator {}
+
+            Platform.MenuItem {
+                text: i18n("Quit")
+                onTriggered: Qt.quit()
+            }
+        }
+
+        onActivated: function(reason) {
+            if (reason === Platform.SystemTrayIcon.Trigger) {
+                if (!root.visible || root.visibility === Window.Hidden) {
+                    root.show()
+                    root.raise()
+                } else {
+                    root.hide()
+                }
+            }
+        }
     }
 }

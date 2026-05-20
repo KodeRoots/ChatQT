@@ -28,6 +28,7 @@ find_package(Qt6 ${QT_MIN_VERSION} REQUIRED COMPONENTS
     Sql
     Network
     Qml
+    LabsPlatform
 )
 
 find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
