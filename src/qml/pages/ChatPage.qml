@@ -77,15 +77,25 @@ Kirigami.Page {
         var state = McpClient.getServerState(server.id)
         if (state && (state.status === "connected" || state.status === "connecting")) return
 
+        var displayName = server.displayName || server.id
+        applicationWindow().showPassiveNotification(i18n("Connecting to %1…").arg(displayName))
+
         if (server.type === "stdio") {
-            if (!server.command) return
+            if (!server.command) {
+                applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no command configured").arg(displayName))
+                return
+            }
             var envMap = {}
             if (server.env) { try { envMap = JSON.parse(server.env) } catch (e) {} }
             var argsList = []
             if (server.args) { argsList = server.args.split(/\s+/).filter(function(a) { return a.length > 0 }) }
+            _mcpStartupNotifications[server.id] = displayName
             McpProcessManager.startProcess(server.id, server.command, argsList, envMap)
         } else {
-            if (!server.url) return
+            if (!server.url) {
+                applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no URL configured").arg(displayName))
+                return
+            }
             var headers = {}
             if (server.token) { headers["Authorization"] = "Bearer " + server.token }
             if (server.headers) {
@@ -107,14 +117,23 @@ Kirigami.Page {
                         server.url, result.sessionId, headers,
                         function(tools) {
                             McpClient.updateServerState(server.id, { tools: tools, toolCount: tools.length })
+                            applicationWindow().showPassiveNotification(
+                                i18n("Connected to %1 — %2 tool(s) available").arg(displayName).arg(tools.length)
+                            )
                         },
                         function() {
                             McpClient.updateServerState(server.id, { tools: [], toolCount: 0 })
+                            applicationWindow().showPassiveNotification(
+                                i18n("Connected to %1 but failed to list tools").arg(displayName)
+                            )
                         }
                     )
                 },
-                function() {
+                function(code, message) {
                     McpClient.updateServerState(server.id, { status: "error" })
+                    applicationWindow().showPassiveNotification(
+                        i18n("Failed to connect to %1: %2").arg(displayName).arg(message)
+                    )
                 }
             )
         }
@@ -598,6 +617,7 @@ Kirigami.Page {
     }
 
     property var _stdioPendingCalls: ({})
+    property var _mcpStartupNotifications: ({})
 
     Connections {
         target: McpProcessManager
@@ -614,6 +634,12 @@ Kirigami.Page {
                         type: "stdio",
                         serverId: serverId
                     })
+                    if (_mcpStartupNotifications[serverId]) {
+                        applicationWindow().showPassiveNotification(
+                            i18n("Connected to %1 — %2 tool(s) available").arg(_mcpStartupNotifications[serverId]).arg(response.result.tools.length)
+                        )
+                        delete _mcpStartupNotifications[serverId]
+                    }
                 }
 
                 if (response.method === "notifications/tools/list_changed") {
@@ -690,13 +716,33 @@ Kirigami.Page {
         function onProcessStatusChanged(serverId, status) {
             if (status === "connected") {
                 McpClient.updateServerState(serverId, { status: "connected" })
-            } else if (status === "disconnected" || status === "error") {
-                McpClient.updateServerState(serverId, { status: status, tools: [], toolCount: 0 })
+            } else if (status === "disconnected") {
+                McpClient.updateServerState(serverId, { status: "disconnected", tools: [], toolCount: 0 })
+                if (_mcpStartupNotifications[serverId]) {
+                    applicationWindow().showPassiveNotification(
+                        i18n("%1 disconnected").arg(_mcpStartupNotifications[serverId])
+                    )
+                    delete _mcpStartupNotifications[serverId]
+                }
+            } else if (status === "error") {
+                McpClient.updateServerState(serverId, { status: "error", tools: [], toolCount: 0 })
+                if (_mcpStartupNotifications[serverId]) {
+                    applicationWindow().showPassiveNotification(
+                        i18n("Failed to start %1").arg(_mcpStartupNotifications[serverId])
+                    )
+                    delete _mcpStartupNotifications[serverId]
+                }
             }
         }
 
         function onProcessError(serverId, errorMessage) {
             McpClient.updateServerState(serverId, { status: "error" })
+            if (_mcpStartupNotifications[serverId]) {
+                applicationWindow().showPassiveNotification(
+                    i18n("Failed to start %1: %2").arg(_mcpStartupNotifications[serverId]).arg(errorMessage)
+                )
+                delete _mcpStartupNotifications[serverId]
+            }
         }
     }
 
