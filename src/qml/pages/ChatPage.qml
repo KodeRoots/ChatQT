@@ -370,7 +370,12 @@ Kirigami.Page {
         var funcName = toolCall.function.name
         var funcArgs = {}
         try {
-            funcArgs = JSON.parse(toolCall.function.arguments || "{}")
+            var rawArgs = toolCall.function.arguments
+            if (typeof rawArgs === 'object' && rawArgs !== null) {
+                funcArgs = rawArgs
+            } else {
+                funcArgs = JSON.parse(rawArgs || "{}")
+            }
         } catch (e) {
             funcArgs = {}
         }

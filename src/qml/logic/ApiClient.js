@@ -127,7 +127,7 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
                                         if (typeof tcItem.function.arguments === 'string') {
                                             toolCalls[tcIndex].function.arguments += tcItem.function.arguments;
                                         } else {
-                                            toolCalls[tcIndex].function.arguments += JSON.stringify(tcItem.function.arguments);
+                                            toolCalls[tcIndex].function.arguments = tcItem.function.arguments;
                                         }
                                     }
                                 }
