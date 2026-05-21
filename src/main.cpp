@@ -40,9 +40,16 @@ int main(int argc, char *argv[])
         QStringLiteral(CHATQT_VERSION_STRING),
         i18n("A simple AI chat client for OpenAI-compatible providers"),
         KAboutLicense::LGPL_V2_1,
-        i18n("(c) 2024 Denys Madureira")
-    );
-    aboutData.addAuthor(i18nc("@info:credit", "Denys Madureira"), QString(), QStringLiteral("denysmb@zoho.com"));
+        i18n("© 2024-2026 KodeRoots"));
+    aboutData.setBugAddress("https://github.com/KodeRoots/ChatQT/issues");
+    aboutData.addAuthor(
+        i18nc("@info:credit", "Denys Madureira"),
+        i18nc("@info:credit", "Author"),
+        QStringLiteral("denys@koderoots.org"),
+        QStringLiteral("https://denysmadureira.dev"));
+    aboutData.setTranslator(
+        i18nc("NAME OF TRANSLATORS", "Your names"),
+        i18nc("EMAIL OF TRANSLATORS", "Your emails"));
     aboutData.setDesktopFileName(QStringLiteral("org.koderoots.chatqt"));
     KAboutData::setApplicationData(aboutData);
 

@@ -8,6 +8,7 @@ import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import Qt.labs.platform as Platform
 import org.kde.kirigami as Kirigami
+import org.kde.coreaddons
 import org.koderoots.chatqt
 
 Kirigami.ApplicationWindow {
@@ -31,8 +32,20 @@ Kirigami.ApplicationWindow {
                 checkable: true
                 checked: chatPage.disableAutoScroll
                 onTriggered: chatPage.disableAutoScroll = !chatPage.disableAutoScroll
+            },
+            Kirigami.Action {
+                text: i18nc("@action", "About")
+                icon.name: "help-about"
+                onTriggered: root.pageStack.layers.push(aboutPage)
             }
         ]
+    }
+
+    Component {
+        id: aboutPage
+        Kirigami.AboutPage {
+            aboutData: AboutData
+        }
     }
 
     pageStack.initialPage: ChatPage {
