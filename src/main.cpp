@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
         KAboutLicense::LGPL_V2_1,
         i18n("© 2024-2026 KodeRoots"));
     aboutData.setBugAddress("https://github.com/KodeRoots/ChatQT/issues");
+    aboutData.setOrganizationDomain("koderoots.org");
     aboutData.addAuthor(
         i18nc("@info:credit", "Denys Madureira"),
         i18nc("@info:credit", "Author"),

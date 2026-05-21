@@ -45,6 +45,7 @@ Kirigami.ApplicationWindow {
         id: aboutPage
         Kirigami.AboutPage {
             aboutData: AboutData
+            getInvolvedUrl: "https://koderoots.org/contribute"
         }
     }
 
