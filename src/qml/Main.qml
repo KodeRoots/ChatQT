@@ -36,6 +36,7 @@ Kirigami.ApplicationWindow {
             Kirigami.Action {
                 text: i18nc("@action", "About")
                 icon.name: "help-about"
+                enabled: root.pageStack.layers.depth <= 1
                 onTriggered: root.pageStack.layers.push(aboutPage)
             }
         ]

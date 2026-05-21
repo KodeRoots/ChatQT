@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         QStringLiteral(CHATQT_VERSION_STRING),
         i18n("A simple AI chat client for OpenAI-compatible providers"),
         KAboutLicense::LGPL_V2_1,
-        i18n("© 2024-2026 KodeRoots"));
+        i18n("© 2026 KodeRoots"));
     aboutData.setBugAddress("https://github.com/KodeRoots/ChatQT/issues");
     aboutData.setOrganizationDomain("koderoots.org");
     aboutData.addAuthor(
