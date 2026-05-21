@@ -16,6 +16,7 @@ Kirigami.AbstractCard {
     property string sessionProvider: ""
     property string sessionTimestamp: ""
     property bool isActive: false
+    property bool isLoading: false
 
     signal deleteClicked
 
@@ -50,6 +51,13 @@ Kirigami.AbstractCard {
                 maximumLineCount: 1
                 color: root.isActive ? Kirigami.Theme.highlightedTextColor : Kirigami.Theme.textColor
                 Layout.alignment: Qt.AlignVTop
+            }
+
+            QQC2.BusyIndicator {
+                visible: root.isLoading
+                running: root.isLoading
+                implicitHeight: deleteButton.height
+                implicitWidth: deleteButton.height
             }
 
             QQC2.Button {

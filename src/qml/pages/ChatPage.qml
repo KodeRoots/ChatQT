@@ -60,6 +60,65 @@ Kirigami.Page {
     property var mcpFunctions: []
     property int mcpToolCallDepth: 0
     readonly property int mcpMaxToolCallDepth: 10
+    property var sessionLoadingState: ({})
+    property string streamingSessionId: ""
+    property var sessionPromptArrays: ({})
+
+    function initMcpServers() {
+        var servers = appSettings.getMcpServers()
+        for (var i = 0; i < servers.length; i++) {
+            if (servers[i].enabled) {
+                initMcpServer(servers[i])
+            }
+        }
+    }
+
+    function initMcpServer(server) {
+        var state = McpClient.getServerState(server.id)
+        if (state && (state.status === "connected" || state.status === "connecting")) return
+
+        if (server.type === "stdio") {
+            if (!server.command) return
+            var envMap = {}
+            if (server.env) { try { envMap = JSON.parse(server.env) } catch (e) {} }
+            var argsList = []
+            if (server.args) { argsList = server.args.split(/\s+/).filter(function(a) { return a.length > 0 }) }
+            McpProcessManager.startProcess(server.id, server.command, argsList, envMap)
+        } else {
+            if (!server.url) return
+            var headers = {}
+            if (server.token) { headers["Authorization"] = "Bearer " + server.token }
+            if (server.headers) {
+                try {
+                    var customHeaders = JSON.parse(server.headers)
+                    var keys = Object.keys(customHeaders)
+                    for (var k = 0; k < keys.length; k++) { headers[keys[k]] = customHeaders[keys[k]] }
+                } catch (e) {}
+            }
+            McpClient.initializeServer(
+                server.url, headers,
+                function(result) {
+                    McpClient.updateServerState(server.id, {
+                        status: "connected", sessionId: result.sessionId,
+                        serverInfo: result.serverInfo, capabilities: result.capabilities,
+                        headers: headers, url: server.url.replace(/\/$/, ''), type: "remote"
+                    })
+                    McpClient.listTools(
+                        server.url, result.sessionId, headers,
+                        function(tools) {
+                            McpClient.updateServerState(server.id, { tools: tools, toolCount: tools.length })
+                        },
+                        function() {
+                            McpClient.updateServerState(server.id, { tools: [], toolCount: 0 })
+                        }
+                    )
+                },
+                function() {
+                    McpClient.updateServerState(server.id, { status: "error" })
+                }
+            )
+        }
+    }
 
     function gatherMcpFunctions() {
         var functions = []
@@ -231,37 +290,45 @@ Kirigami.Page {
         return i18n("Provider not configured.");
     }
 
-    function handleStreaming(text, oldLength, listModel, thinkingText) {
-        isStreaming = true;
+    function handleStreaming(text, oldLength, listModel, thinkingText, capturedSessionId) {
+        var sessionId = capturedSessionId || currentSessionId
+        var isActiveSession = sessionId === currentSessionId
 
-        if (!disableAutoScroll && listView.contentHeight > listView.height) {
+        isStreaming = isActiveSession;
+
+        if (isActiveSession && !disableAutoScroll && listView.contentHeight > listView.height) {
             listView.positionViewAtEnd();
         }
 
-        if (listModel.count === oldLength) {
-            listModel.append({
-                "name": "Assistant",
-                "content": text,
-                "thinkingContent": thinkingText !== undefined ? thinkingText : "",
-                "isError": false
-            });
-            if (currentSessionId !== "") {
-                SessionStore.addMessage(currentSessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
+        if (isActiveSession) {
+            if (listModel.count === oldLength) {
+                listModel.append({
+                    "name": "Assistant",
+                    "content": text,
+                    "thinkingContent": thinkingText !== undefined ? thinkingText : "",
+                    "isError": false
+                });
+                SessionStore.addMessage(sessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
+            } else {
+                listModel.setProperty(oldLength, "content", text);
+                if (thinkingText !== undefined) {
+                    listModel.setProperty(oldLength, "thinkingContent", thinkingText);
+                }
             }
         } else {
-            listModel.setProperty(oldLength, "content", text);
-            if (thinkingText !== undefined) {
-                listModel.setProperty(oldLength, "thinkingContent", thinkingText);
+            if (SessionStore.getLastMessage(sessionId).role !== "assistant") {
+                SessionStore.addMessage(sessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
+            } else {
+                SessionStore.updateLastAssistantMessage(sessionId, text, thinkingText !== undefined ? thinkingText : "")
             }
-        }
-
-        if (currentSessionId !== "" && !streamingSaveTimer.running) {
-            streamingSaveTimer.start();
         }
     }
 
-    function handleRequestComplete(oldLength, listModel, finalText, toolCalls) {
-        if (activeXhr === null && mcpToolCallDepth === 0) return;
+    function handleRequestComplete(oldLength, listModel, finalText, toolCalls, capturedSessionId) {
+        if (activeXhr === null && mcpToolCallDepth === 0 && !capturedSessionId) return;
+
+        var sessionId = capturedSessionId || currentSessionId
+        var isActiveSession = sessionId === currentSessionId
 
         var isOllamaError = currentProvider === "ollama" && finalText && (
             finalText.indexOf("does not support") !== -1 ||
@@ -269,22 +336,29 @@ Kirigami.Page {
             finalText.startsWith("{\"error\"")
         )
 
-        if (isOllamaError && listModel.count > oldLength) {
-            listModel.setProperty(oldLength, "isError", true);
-            listModel.setProperty(oldLength, "name", "Error");
-            listModel.setProperty(oldLength, "thinkingContent", "");
-            if (currentSessionId !== "") {
-                SessionStore.markLastAssistantAsError(currentSessionId);
+        if (isOllamaError) {
+            if (isActiveSession && listModel.count > oldLength) {
+                listModel.setProperty(oldLength, "isError", true);
+                listModel.setProperty(oldLength, "name", "Error");
+                listModel.setProperty(oldLength, "thinkingContent", "");
             }
-            isLoading = false;
+            if (sessionId !== "") {
+                SessionStore.markLastAssistantAsError(sessionId);
+            }
+            if (isActiveSession) {
+                isLoading = false;
+                isStreaming = false;
+            }
             activeXhr = null;
-            isStreaming = false;
             mcpToolCallDepth = 0;
+            streamingSessionId = ""
+            sessionLoadingState[sessionId] = false
+            updateSessionLoadingState(sessionId, false)
             return;
         }
 
         if (toolCalls && toolCalls.length > 0 && mcpToolCallDepth < mcpMaxToolCallDepth) {
-            handleMcpToolCalls(oldLength, listModel, finalText, toolCalls)
+            handleMcpToolCalls(oldLength, listModel, finalText, toolCalls, sessionId)
             return
         }
 
@@ -292,64 +366,77 @@ Kirigami.Page {
             console.warn("MCP tool call depth limit reached (" + mcpMaxToolCallDepth + ")")
         }
 
-        if (listModel.count > oldLength) {
-            const lastValue = listModel.get(oldLength);
-            promptArray.push({ "role": "assistant", "content": lastValue.content, "images": [] });
+        var sessionPA = sessionPromptArrays[sessionId] || promptArray
+        if (isActiveSession && listModel.count > oldLength) {
+            var lastValue = listModel.get(oldLength);
+            sessionPA.push({ "role": "assistant", "content": lastValue.content, "images": [] });
+        } else if (!isActiveSession) {
+            sessionPA.push({ "role": "assistant", "content": finalText || "", "images": [] });
         }
-        isLoading = false;
+        sessionPromptArrays[sessionId] = sessionPA
 
+        if (sessionId !== "") {
+            var finalContent = finalText || ""
+            if (isActiveSession && listModel.count > oldLength) {
+                var lastMsg = listModel.get(oldLength);
+                finalContent = lastMsg.content
+                SessionStore.finalizeLastAssistantMessage(sessionId, finalContent, lastMsg.thinkingContent || "");
+            } else {
+                SessionStore.finalizeLastAssistantMessage(sessionId, finalContent, "")
+            }
+            refreshSessionList()
+        }
+
+        if (isActiveSession) {
+            isLoading = false;
+            isStreaming = false;
+        }
         activeXhr = null;
-        isStreaming = false;
         mcpToolCallDepth = 0;
-
-        if (currentSessionId !== "" && listModel.count > oldLength) {
-            var lastMsg = listModel.get(oldLength);
-            SessionStore.finalizeLastAssistantMessage(currentSessionId, lastMsg.content, lastMsg.thinkingContent || "");
-            refreshSessionList();
-        }
+        streamingSessionId = ""
+        sessionLoadingState[sessionId] = false
+        updateSessionLoadingState(sessionId, false)
     }
 
-    function handleMcpToolCalls(oldLength, listModel, finalText, toolCalls) {
+    function handleMcpToolCalls(oldLength, listModel, finalText, toolCalls, capturedSessionId) {
+        var sessionId = capturedSessionId || currentSessionId
+        var isActiveSession = sessionId === currentSessionId
         mcpToolCallDepth++
 
-        if (listModel.count === oldLength) {
-            var displayText = finalText || ""
-            if (displayText === "" && toolCalls.length > 0) {
-                var toolNames = []
-                for (var t = 0; t < toolCalls.length; t++) {
-                    toolNames.push(toolCalls[t].function.name)
+        if (isActiveSession) {
+            if (listModel.count === oldLength) {
+                var displayText = finalText || ""
+                if (displayText === "" && toolCalls.length > 0) {
+                    var toolNames = []
+                    for (var t = 0; t < toolCalls.length; t++) {
+                        toolNames.push(toolCalls[t].function.name)
+                    }
+                    displayText = i18n("Calling tools: %1", toolNames.join(", "))
                 }
-                displayText = i18n("Calling tools: %1", toolNames.join(", "))
-            }
 
-            listModel.append({
-                "name": "Assistant",
-                "content": displayText,
-                "thinkingContent": ""
-            })
+                listModel.append({
+                    "name": "Assistant",
+                    "content": displayText,
+                    "thinkingContent": ""
+                })
+            } else {
+                if (finalText) {
+                    listModel.setProperty(oldLength, "content", finalText)
+                }
+            }
+        }
 
-            if (currentSessionId !== "") {
-                var assistantMsg = { "role": "assistant", "content": displayText }
-                if (toolCalls.length > 0) {
-                    assistantMsg["tool_calls"] = toolCalls
-                }
-                promptArray.push(assistantMsg)
-                SessionStore.addMessage(currentSessionId, "assistant", displayText, "")
-            }
-        } else {
-            if (finalText) {
-                listModel.setProperty(oldLength, "content", finalText)
-            }
-            var existingAssistant = null
-            for (var p = promptArray.length - 1; p >= 0; p--) {
-                if (promptArray[p].role === "assistant") {
-                    existingAssistant = promptArray[p]
-                    break
-                }
-            }
-            if (existingAssistant && toolCalls.length > 0) {
-                existingAssistant["tool_calls"] = toolCalls
-            }
+        var assistantMsg = { "role": "assistant", "content": finalText || "" }
+        if (toolCalls.length > 0) {
+            assistantMsg["tool_calls"] = toolCalls
+        }
+
+        var sessionPA = sessionPromptArrays[sessionId] || promptArray
+        sessionPA.push(assistantMsg)
+        sessionPromptArrays[sessionId] = sessionPA
+
+        if (sessionId !== "") {
+            SessionStore.addMessage(sessionId, "assistant", finalText || "", "")
         }
 
         var pendingToolCalls = []
@@ -357,12 +444,15 @@ Kirigami.Page {
             pendingToolCalls.push(toolCalls[i])
         }
 
-        executeNextMcpToolCall(pendingToolCalls, 0, oldLength, listModel)
+        executeNextMcpToolCall(pendingToolCalls, 0, oldLength, listModel, sessionId)
     }
 
-    function executeNextMcpToolCall(toolCalls, currentIndex, oldLength, listModel) {
+    function executeNextMcpToolCall(toolCalls, currentIndex, oldLength, listModel, capturedSessionId) {
+        var sessionId = capturedSessionId || currentSessionId
+        var isActiveSession = sessionId === currentSessionId
+
         if (currentIndex >= toolCalls.length) {
-            sendMcpFollowUpRequest(oldLength, listModel)
+            sendMcpFollowUpRequest(oldLength, listModel, sessionId)
             return
         }
 
@@ -391,13 +481,13 @@ Kirigami.Page {
 
         if (!isMcp) {
             var errorMsg = i18n("Tool %1 is not an MCP tool").arg(funcName)
-            listModel.setProperty(listModel.count - 1, "content", errorMsg)
+            if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg)
             promptArray.push({
                 "role": "tool",
                 "tool_call_id": toolCall.id,
                 "content": errorMsg
             })
-            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
             return
         }
 
@@ -421,18 +511,18 @@ Kirigami.Page {
 
         if (!foundServer) {
             var errorMsg2 = i18n("MCP server not found for tool %1").arg(funcName)
-            listModel.setProperty(listModel.count - 1, "content", errorMsg2)
+            if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg2)
             promptArray.push({
                 "role": "tool",
                 "tool_call_id": toolCall.id,
                 "content": errorMsg2
             })
-            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
             return
         }
 
         if (foundServer.type === "stdio" || foundTools.type === "stdio") {
-            callStdioMcpTool(foundServer.id, mcpToolName, funcArgs, toolCall.id, funcName, listModel, toolCalls, currentIndex, oldLength)
+            callStdioMcpTool(foundServer.id, mcpToolName, funcArgs, toolCall.id, funcName, listModel, toolCalls, currentIndex, oldLength, sessionId)
             return
         }
 
@@ -448,11 +538,13 @@ Kirigami.Page {
                     resultContent = i18n("Error: %1").arg(resultContent)
                 }
 
-                listModel.setProperty(listModel.count - 1, "content",
-                    i18n("%1: %2").arg(funcName).arg(resultContent.substring(0, 500)))
+                if (isActiveSession) {
+                    listModel.setProperty(listModel.count - 1, "content",
+                        i18n("%1: %2").arg(funcName).arg(resultContent.substring(0, 500)))
+                }
 
-                if (currentSessionId !== "") {
-                    SessionStore.addMessage(currentSessionId, "tool",
+                if (sessionId !== "") {
+                    SessionStore.addMessage(sessionId, "tool",
                         i18n("%1 result: %2").arg(funcName).arg(resultContent.substring(0, 500)), "")
                 }
 
@@ -462,11 +554,11 @@ Kirigami.Page {
                     "content": resultContent
                 })
 
-                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
             },
             function(code, message) {
                 var errorMsg3 = i18n("Tool %1 failed: %2").arg(funcName).arg(message)
-                listModel.setProperty(listModel.count - 1, "content", errorMsg3)
+                if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg3)
 
                 promptArray.push({
                     "role": "tool",
@@ -474,12 +566,12 @@ Kirigami.Page {
                     "content": errorMsg3
                 })
 
-                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel)
+                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
             }
         )
     }
 
-    function callStdioMcpTool(serverId, toolName, arguments, toolCallId, funcName, listModel, toolCalls, currentIndex, oldLength) {
+    function callStdioMcpTool(serverId, toolName, arguments, toolCallId, funcName, listModel, toolCalls, currentIndex, oldLength, capturedSessionId) {
         var request = McpClient.createJsonRpcRequest("tools/call", {
             name: toolName,
             arguments: arguments
@@ -495,7 +587,8 @@ Kirigami.Page {
             listModel: listModel,
             toolCalls: toolCalls,
             currentIndex: currentIndex,
-            oldLength: oldLength
+            oldLength: oldLength,
+            capturedSessionId: capturedSessionId
         }
 
         if (!_stdioPendingCalls) _stdioPendingCalls = {}
@@ -512,6 +605,23 @@ Kirigami.Page {
         function onMessageReceived(serverId, jsonMessage) {
             try {
                 var response = JSON.parse(jsonMessage)
+
+                if (response.result && response.result.tools) {
+                    McpClient.updateServerState(serverId, {
+                        status: "connected",
+                        tools: response.result.tools,
+                        toolCount: response.result.tools.length,
+                        type: "stdio",
+                        serverId: serverId
+                    })
+                }
+
+                if (response.method === "notifications/tools/list_changed") {
+                    var requestId = McpClient.getNextRequestId()
+                    var toolsRequest = McpClient.createJsonRpcRequest("tools/list", {})
+                    McpProcessManager.sendMessage(serverId, JSON.stringify(toolsRequest), requestId)
+                }
+
                 if (!response.id || !_stdioPendingCalls || !_stdioPendingCalls[response.id]) return
 
                 var pending = _stdioPendingCalls[response.id]
@@ -535,11 +645,16 @@ Kirigami.Page {
                         resultText = i18n("Error: %1").arg(resultText)
                     }
 
-                    pending.listModel.setProperty(pending.listModel.count - 1, "content",
-                        i18n("%1: %2").arg(pending.funcName).arg(resultText.substring(0, 500)))
+                    var stdioSessionId = pending.capturedSessionId || currentSessionId
+                    var stdioIsActive = stdioSessionId === currentSessionId
 
-                    if (currentSessionId !== "") {
-                        SessionStore.addMessage(currentSessionId, "tool",
+                    if (stdioIsActive) {
+                        pending.listModel.setProperty(pending.listModel.count - 1, "content",
+                            i18n("%1: %2").arg(pending.funcName).arg(resultText.substring(0, 500)))
+                    }
+
+                    if (stdioSessionId !== "") {
+                        SessionStore.addMessage(stdioSessionId, "tool",
                             i18n("%1 result: %2").arg(pending.funcName).arg(resultText.substring(0, 500)), "")
                     }
 
@@ -549,10 +664,15 @@ Kirigami.Page {
                         "content": resultText
                     })
 
-                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel)
+                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel, stdioSessionId)
                 } else if (response.error) {
                     var errorMsg = i18n("Tool %1 failed: %2").arg(pending.funcName).arg(response.error.message || "Unknown error")
-                    pending.listModel.setProperty(pending.listModel.count - 1, "content", errorMsg)
+                    var errSessionId = pending.capturedSessionId || currentSessionId
+                    var errIsActive = errSessionId === currentSessionId
+
+                    if (errIsActive) {
+                        pending.listModel.setProperty(pending.listModel.count - 1, "content", errorMsg)
+                    }
 
                     promptArray.push({
                         "role": "tool",
@@ -560,15 +680,35 @@ Kirigami.Page {
                         "content": errorMsg
                     })
 
-                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel)
+                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel, errSessionId)
                 }
             } catch (e) {
                 console.warn("Failed to process stdio MCP response:", e)
             }
         }
+
+        function onProcessStatusChanged(serverId, status) {
+            if (status === "connected") {
+                McpClient.updateServerState(serverId, { status: "connected" })
+            } else if (status === "disconnected" || status === "error") {
+                McpClient.updateServerState(serverId, { status: status, tools: [], toolCount: 0 })
+            }
+        }
+
+        function onProcessError(serverId, errorMessage) {
+            McpClient.updateServerState(serverId, { status: "error" })
+        }
     }
 
-    function sendMcpFollowUpRequest(oldLength, listModel) {
+    function sendMcpFollowUpRequest(oldLength, listModel, capturedSessionId) {
+        var sessionId = capturedSessionId || currentSessionId
+        var isActiveSession = sessionId === currentSessionId
+
+        var streamingCb = isActiveSession ? handleStreaming : function() {}
+        var completeCb = function(ol, lm, finalText, toolCalls) {
+            handleRequestComplete(ol, lm, finalText, toolCalls, sessionId)
+        }
+
         if (currentProvider.startsWith("openai-compatible:")) {
             var provider = appSettings.getSelectedOpenAICompatibleProvider()
             if (provider) {
@@ -582,8 +722,8 @@ Kirigami.Page {
                     null,
                     false,
                     listModel,
-                    handleStreaming,
-                    handleRequestComplete,
+                    streamingCb,
+                    completeCb,
                     mcpFuncs.length > 0 ? mcpFuncs : undefined
                 )
             }
@@ -593,8 +733,8 @@ Kirigami.Page {
                 currentModel,
                 promptArray,
                 listModel,
-                handleStreaming,
-                handleRequestComplete,
+                streamingCb,
+                completeCb,
                 thinkingEnabled,
                 ollamaMcpFuncs.length > 0 ? ollamaMcpFuncs : undefined
             )
@@ -610,8 +750,8 @@ Kirigami.Page {
                     { "x-openclaw-agent-id": "main" },
                     true,
                     listModel,
-                    handleStreaming,
-                    handleRequestComplete
+                    streamingCb,
+                    completeCb
                 )
             }
         } else if (currentProvider === "opencode") {
@@ -622,16 +762,16 @@ Kirigami.Page {
                 appSettings.opencodeModel,
                 promptArray,
                 listModel,
-                handleStreaming,
-                handleRequestComplete
+                streamingCb,
+                completeCb
             )
         } else if (currentProvider === "pi") {
             activeXhr = PiClient.requestPi(
                 PiProcessManager,
                 promptArray,
                 listModel,
-                handleStreaming,
-                handleRequestComplete
+                streamingCb,
+                completeCb
             )
         }
     }
@@ -753,6 +893,8 @@ Kirigami.Page {
             refreshSessionList()
         }
 
+        var capturedSessionId = currentSessionId
+
         SessionStore.addMessage(currentSessionId, "user", prompt, "")
 
         var currentProviderName = currentProvider
@@ -780,19 +922,35 @@ Kirigami.Page {
 
         promptArray.push({ "role": "user", "content": prompt, "images": [] });
 
+        sessionPromptArrays[capturedSessionId] = promptArray.slice()
+
         isLoading = true;
         listView.positionViewAtEnd();
         mcpToolCallDepth = 0;
 
+        sessionLoadingState[capturedSessionId] = true
+        streamingSessionId = capturedSessionId
+        updateSessionLoadingState(capturedSessionId, true)
+
         mcpFunctions = gatherMcpFunctions()
+
+        var streamingCb = function(text, ol, lm, thinking) {
+            handleStreaming(text, ol, lm, thinking, capturedSessionId)
+            if (capturedSessionId !== "" && !streamingSaveTimer.running) {
+                streamingSaveTimer.start()
+            }
+        }
+        var completeCb = function(ol, lm, finalText, toolCalls) {
+            handleRequestComplete(ol, lm, finalText, toolCalls, capturedSessionId)
+        }
 
         if (currentProvider === "ollama") {
             activeXhr = ApiClient.requestOllama(
                 currentModel,
                 promptArray,
                 listModel,
-                handleStreaming,
-                handleRequestComplete,
+                streamingCb,
+                completeCb,
                 thinkingEnabled,
                 mcpFunctions.length > 0 ? mcpFunctions : undefined
             );
@@ -808,8 +966,8 @@ Kirigami.Page {
                     { "x-openclaw-agent-id": "main" },
                     true,
                     listModel,
-                    handleStreaming,
-                    handleRequestComplete
+                    streamingCb,
+                    completeCb
                 );
             }
         } else if (currentProvider.startsWith("openai-compatible:")) {
@@ -824,8 +982,8 @@ Kirigami.Page {
                     null,
                     false,
                     listModel,
-                    handleStreaming,
-                    handleRequestComplete,
+                    streamingCb,
+                    completeCb,
                     mcpFunctions.length > 0 ? mcpFunctions : undefined
                 );
             }
@@ -837,16 +995,16 @@ Kirigami.Page {
                 appSettings.opencodeModel,
                 promptArray,
                 listModel,
-                handleStreaming,
-                handleRequestComplete
+                streamingCb,
+                completeCb
             );
         } else if (currentProvider === "pi") {
             activeXhr = PiClient.requestPi(
                 PiProcessManager,
                 promptArray,
                 listModel,
-                handleStreaming,
-                handleRequestComplete
+                streamingCb,
+                completeCb
             );
         }
     }
@@ -877,6 +1035,15 @@ Kirigami.Page {
         OpenCodeClient.resetSession();
     }
 
+    function updateSessionLoadingState(sessionId, loading) {
+        for (var i = 0; i < sessionModel.count; i++) {
+            if (sessionModel.get(i).sessionId === sessionId) {
+                sessionModel.setProperty(i, "isLoading", loading)
+                break
+            }
+        }
+    }
+
     function refreshSessionList() {
         sessionModel.clear();
         var sessions = SessionStore.listSessions();
@@ -888,7 +1055,8 @@ Kirigami.Page {
                 "sessionId": s.id,
                 "title": s.title,
                 "provider": providerDisplay,
-                "timestamp": timestampDisplay
+                "timestamp": timestampDisplay,
+                "isLoading": sessionLoadingState[s.id] === true
             });
         }
     }
@@ -909,26 +1077,27 @@ Kirigami.Page {
     }
 
     function loadSessionById(sessionId) {
-        if (isLoading) return;
-
         if (currentSessionId === sessionId) return;
+
+        if (currentSessionId !== "" && currentSessionId !== sessionId) {
+            sessionPromptArrays[currentSessionId] = promptArray.slice()
+        }
 
         var sessionInfo = SessionStore.getSession(sessionId);
         if (!sessionInfo || !sessionInfo.id) return;
 
         var sessionProvider = sessionInfo.provider || ""
-        var sessionModel = sessionInfo.model || ""
+        var sessionModelName = sessionInfo.model || ""
 
         if (sessionProvider !== "") {
             switchProvider(sessionProvider)
         }
 
-        if (currentProvider === "ollama" && sessionModel !== "" && sessionModel !== currentModel) {
-            currentModel = sessionModel
+        if (currentProvider === "ollama" && sessionModelName !== "" && sessionModelName !== currentModel) {
+            currentModel = sessionModelName
         }
 
         listModelController.clear();
-        promptArray = [];
         OpenCodeClient.resetSession();
 
         var messages = SessionStore.loadSession(sessionId);
@@ -938,11 +1107,12 @@ Kirigami.Page {
                 msg.role === "assistant" && msg.content && (
                     msg.content.indexOf("does not support") !== -1 ||
                     msg.content.indexOf("Ollama error") !== -1 ||
-                    msg.content.startsWith("{\"error\"")
+                    msg.content.startsWith('{\"error\"}')
                 )
             );
             var roleName;
             if (msg.role === "user") roleName = "User";
+            else if (msg.role === "tool") roleName = "Tool";
             else if (isErr) roleName = "Error";
             else roleName = "Assistant";
 
@@ -951,13 +1121,24 @@ Kirigami.Page {
                 "content": msg.content,
                 "thinkingContent": msg.thinkingContent || ""
             });
-            if (msg.role === "user" || msg.role === "assistant") {
-                promptArray.push({ "role": msg.role, "content": msg.content, "images": [] });
+        }
+
+        promptArray = []
+        for (var j = 0; j < messages.length; j++) {
+            var m = messages[j]
+            if (m.role === "user" || m.role === "assistant") {
+                promptArray.push({ "role": m.role, "content": m.content, "images": [] })
+            } else if (m.role === "tool") {
+                promptArray.push({ "role": "tool", "content": m.content })
             }
         }
 
         currentSessionId = sessionId;
         appSettings.lastActiveSessionId = sessionId;
+
+        var isSessionLoading = sessionLoadingState[sessionId] === true
+        isLoading = isSessionLoading
+        isStreaming = isSessionLoading
     }
 
     function openSettings() {
@@ -1006,6 +1187,8 @@ Kirigami.Page {
             getModels();
         }
 
+        initMcpServers()
+
         if (currentProvider === "pi" && PiProcessManager.autoStart) {
             PiProcessManager.start();
         }
@@ -1029,11 +1212,14 @@ Kirigami.Page {
         interval: 500
         repeat: false
         onTriggered: {
-            if (currentSessionId !== "" && listModelController && listModelController.count > 0) {
-                var lastIdx = listModelController.count - 1;
-                var lastItem = listModelController.get(lastIdx);
-                if (lastItem && lastItem.name === "Assistant") {
-                    SessionStore.updateLastAssistantMessage(currentSessionId, lastItem.content, lastItem.thinkingContent || "");
+            var saveId = streamingSessionId || currentSessionId
+            if (saveId !== "") {
+                if (saveId === currentSessionId && listModelController && listModelController.count > 0) {
+                    var lastIdx = listModelController.count - 1;
+                    var lastItem = listModelController.get(lastIdx);
+                    if (lastItem && lastItem.name === "Assistant") {
+                        SessionStore.updateLastAssistantMessage(saveId, lastItem.content, lastItem.thinkingContent || "");
+                    }
                 }
             }
         }

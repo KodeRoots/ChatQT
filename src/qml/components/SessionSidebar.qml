@@ -73,6 +73,7 @@ ColumnLayout {
             sessionProvider: model.provider
             sessionTimestamp: model.timestamp
             isActive: model.sessionId === root.currentSessionId
+            isLoading: model.isLoading || false
 
             onClicked: root.sessionClicked(model.sessionId)
             onDeleteClicked: root.sessionDeleteClicked(model.sessionId)
