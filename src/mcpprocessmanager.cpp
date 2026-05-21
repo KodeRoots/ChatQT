@@ -102,15 +102,6 @@ void McpProcess::sendMessage(const QString &jsonMessage, int requestId)
 
     QByteArray data = (jsonMessage + QStringLiteral("\n")).toUtf8();
     m_process->write(data);
-
-    if (requestId > 0) {
-        m_pendingRequests[requestId] = jsonMessage;
-    }
-}
-
-QString McpProcess::getToolsJson() const
-{
-    return m_toolsJson;
 }
 
 void McpProcess::onProcessStarted()
@@ -200,7 +191,7 @@ void McpProcess::onReadyReadStandardOutput()
 void McpProcess::onReadyReadStandardError()
 {
     QByteArray stderrData = m_process->readAllStandardError();
-    Q_UNUSED(stderrData)
+    qWarning() << "MCP stderr:" << QString::fromUtf8(stderrData).trimmed();
 }
 
 void McpProcess::processBuffer()
@@ -333,14 +324,6 @@ int McpProcessManager::getToolCount(const QString &serverId) const
         return m_processes[serverId]->toolCount();
     }
     return 0;
-}
-
-QString McpProcessManager::getToolsJson(const QString &serverId) const
-{
-    if (m_processes.contains(serverId)) {
-        return m_processes[serverId]->getToolsJson();
-    }
-    return QStringLiteral("[]");
 }
 
 bool McpProcessManager::hasProcess(const QString &serverId) const

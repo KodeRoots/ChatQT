@@ -13,7 +13,6 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlError>
-#include <QMutex>
 
 class SessionStore : public QObject
 {
@@ -29,7 +28,7 @@ public:
 
     Q_INVOKABLE QString createSession(const QString &provider, const QString &model);
     Q_INVOKABLE QVariantMap getSession(const QString &sessionId) const;
-    Q_INVOKABLE QVariantList listSessions() const;
+    Q_INVOKABLE QVariantList listSessions();
     Q_INVOKABLE bool deleteSession(const QString &sessionId);
     Q_INVOKABLE bool updateSessionTitle(const QString &sessionId, const QString &title);
     Q_INVOKABLE bool updateSessionProvider(const QString &sessionId, const QString &provider, const QString &model);
@@ -37,7 +36,7 @@ public:
     Q_INVOKABLE bool updateLastAssistantMessage(const QString &sessionId, const QString &content, const QString &thinkingContent = QString());
     Q_INVOKABLE bool markLastAssistantAsError(const QString &sessionId);
     Q_INVOKABLE bool finalizeLastAssistantMessage(const QString &sessionId, const QString &content, const QString &thinkingContent = QString());
-    Q_INVOKABLE QVariantList loadSession(const QString &sessionId) const;
+    Q_INVOKABLE QVariantList loadSession(const QString &sessionId);
     Q_INVOKABLE QVariantMap getLastMessage(const QString &sessionId) const;
     Q_INVOKABLE QString formatRelativeTime(qint64 timestamp) const;
 
@@ -57,8 +56,8 @@ private:
     bool initDatabase();
     bool createTables();
     QString generateId() const;
-    bool executeQuery(QSqlQuery &query) const;
-    void logError(const QString &operation, const QSqlError &error) const;
+    bool executeQuery(QSqlQuery &query);
+    void logError(const QString &operation, const QSqlError &error);
 
     QSqlDatabase m_db;
     QString m_dbPath;

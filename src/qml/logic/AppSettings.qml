@@ -6,6 +6,7 @@
 import QtQuick
 import QtCore
 import org.kde.chatqt
+import org.koderoots.chatqt
 
 QtObject {
     id: settings
@@ -26,66 +27,59 @@ QtObject {
     property string opencodeModel: _settings.value("opencodeModel", "")
     property string lastActiveSessionId: _settings.value("lastActiveSessionId", "")
 
-    // MCP settings
     property string mcpServers: _settings.value("mcpServers", "[]")
     property string mcpToolResults: "{}"
     property bool mcpDefaultsInitialized: _settings.value("mcpDefaultsInitialized", false)
 
-    // Skills settings
     property string skillFolders: _settings.value("skillFolders", JSON.stringify(["~/.skills", "~/.agents/skills"]))
     property string agentFilePath: _settings.value("agentFilePath", "")
 
-    // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
     property bool experimentalFeatures: typeof experimentalFeaturesEnabled !== 'undefined' ? experimentalFeaturesEnabled : false
 
-    property bool _openclawEnabledStored: _settings.value("openclawEnabled", false)
-    property bool _opencodeEnabledStored: _settings.value("opencodeEnabled", false)
-    property bool _piEnabledStored: _settings.value("piEnabled", false)
+    property bool openclawEnabledRaw: _settings.value("openclawEnabled", false)
+    property bool opencodeEnabledRaw: _settings.value("opencodeEnabled", false)
+    property bool piEnabledRaw: _settings.value("piEnabled", false)
 
-    property bool openclawEnabled: experimentalFeatures && _openclawEnabledStored
+    property bool openclawEnabled: experimentalFeatures && openclawEnabledRaw
     property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
-    property bool opencodeEnabled: experimentalFeatures && _opencodeEnabledStored
-    property bool piEnabled: experimentalFeatures && _piEnabledStored
+    property bool opencodeEnabled: experimentalFeatures && opencodeEnabledRaw
+    property bool piEnabled: experimentalFeatures && piEnabledRaw
 
-    readonly property bool isOllama: provider === "ollama"
-    readonly property bool isOpenClaw: provider === "openclaw"
-    readonly property bool isOpenAICompatible: provider === "openai-compatible"
-    readonly property bool isOpenCode: provider === "opencode"
-    readonly property bool isPi: provider === "pi"
+    readonly property bool isOllama: provider === ProviderConstants.PROVIDERS.OLLAMA
+    readonly property bool isOpenClaw: provider === ProviderConstants.PROVIDERS.OPENCLAW
+    readonly property bool isOpenAICompatible: provider === ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE
+    readonly property bool isOpenCode: provider === ProviderConstants.PROVIDERS.OPENCODE
+    readonly property bool isPi: provider === ProviderConstants.PROVIDERS.PI
 
     function getProviderDisplayName() {
-        if (provider === "ollama") return "Ollama"
-        if (provider === "openclaw") {
-            var selectedInstance = getSelectedOpenClawInstance()
+        if (provider === ProviderConstants.PROVIDERS.OLLAMA) return "Ollama"
+        if (provider === ProviderConstants.PROVIDERS.OPENCLAW) {
+            const selectedInstance = getSelectedOpenClawInstance()
             if (selectedInstance) {
                 return selectedInstance.displayName
             }
             return "OpenClaw"
         }
-        if (provider === "openai-compatible") {
-            var selectedProvider = getSelectedOpenAICompatibleProvider()
+        if (provider === ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE) {
+            const selectedProvider = getSelectedOpenAICompatibleProvider()
             if (selectedProvider) {
                 return selectedProvider.displayName
             }
             return openaiCompatibleModel || "OpenAI"
         }
-        if (provider === "opencode") return "OpenCode"
-        if (provider === "pi") return "Pi"
+        if (provider === ProviderConstants.PROVIDERS.OPENCODE) return "OpenCode"
+        if (provider === ProviderConstants.PROVIDERS.PI) return "Pi"
         return "ChatQT"
     }
 
     function generateUuid() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-            var r = Math.random() * 16 | 0
-            var v = c === 'x' ? r : (r & 0x3 | 0x8)
-            return v.toString(16)
-        })
+        return UuidGenerator.generateUuid()
     }
 
     function getOpenaiCompatibleProviders() {
         try {
-            var providers = JSON.parse(openaiCompatibleProviders)
+            let providers = JSON.parse(openaiCompatibleProviders)
             return providers.map(function(p) {
                 if (p.enabled === undefined) {
                     p.enabled = true
@@ -105,8 +99,8 @@ QtObject {
     }
 
     function getFirstEnabledOpenAICompatibleProvider() {
-        var providers = getOpenaiCompatibleProviders()
-        for (var i = 0; i < providers.length; i++) {
+        const providers = getOpenaiCompatibleProviders()
+        for (let i = 0; i < providers.length; i++) {
             if (providers[i].enabled === true) {
                 return providers[i]
             }
@@ -115,8 +109,8 @@ QtObject {
     }
 
     function getSelectedOpenAICompatibleProvider() {
-        var providers = getOpenaiCompatibleProviders()
-        for (var i = 0; i < providers.length; i++) {
+        const providers = getOpenaiCompatibleProviders()
+        for (let i = 0; i < providers.length; i++) {
             if (providers[i].id === selectedOpenAICompatibleProviderId) {
                 return providers[i]
             }
@@ -126,7 +120,7 @@ QtObject {
 
     function getOpenClawInstances() {
         try {
-            var instances = JSON.parse(openclawInstances)
+            let instances = JSON.parse(openclawInstances)
             return instances.map(function(i) {
                 if (i.enabled === undefined) {
                     i.enabled = true
@@ -146,8 +140,8 @@ QtObject {
     }
 
     function getFirstEnabledOpenClawInstance() {
-        var instances = getOpenClawInstances()
-        for (var i = 0; i < instances.length; i++) {
+        const instances = getOpenClawInstances()
+        for (let i = 0; i < instances.length; i++) {
             if (instances[i].enabled === true) {
                 return instances[i]
             }
@@ -156,8 +150,8 @@ QtObject {
     }
 
     function getSelectedOpenClawInstance() {
-        var instances = getOpenClawInstances()
-        for (var i = 0; i < instances.length; i++) {
+        const instances = getOpenClawInstances()
+        for (let i = 0; i < instances.length; i++) {
             if (instances[i].id === selectedOpenClawInstanceId) {
                 return instances[i]
             }
@@ -175,7 +169,7 @@ QtObject {
 
     function getMcpServers() {
         try {
-            var servers = JSON.parse(mcpServers)
+            let servers = JSON.parse(mcpServers)
             return servers.map(function(s) {
                 if (s.enabled === undefined) {
                     s.enabled = true
@@ -194,10 +188,10 @@ QtObject {
     }
 
     function ensureDefaultMcpServers() {
-        var servers = getMcpServers()
-        var hasBashMcp = false
-        var hasFilesystem = false
-        for (var i = 0; i < servers.length; i++) {
+        let servers = getMcpServers()
+        let hasBashMcp = false
+        let hasFilesystem = false
+        for (let i = 0; i < servers.length; i++) {
             if (servers[i].id === "built-in-bash-mcp") hasBashMcp = true
             if (servers[i].id === "built-in-filesystem") hasFilesystem = true
         }
@@ -237,7 +231,7 @@ QtObject {
     }
 
     function _getHomeDir() {
-        var homeUrl = StandardPaths.writableLocation(StandardPaths.HomeLocation)
+        const homeUrl = StandardPaths.writableLocation(StandardPaths.HomeLocation)
         return homeUrl.toString().replace(/^file:\/\//, "")
     }
 
@@ -246,9 +240,9 @@ QtObject {
     }
 
     function getEnabledMcpServers() {
-        var servers = getMcpServers()
-        var enabled = []
-        for (var i = 0; i < servers.length; i++) {
+        const servers = getMcpServers()
+        const enabled = []
+        for (let i = 0; i < servers.length; i++) {
             if (servers[i].enabled === true) {
                 enabled.push(servers[i])
             }
@@ -281,10 +275,10 @@ QtObject {
         _settings.setValue("opencodePassword", opencodePassword)
         _settings.setValue("opencodeModel", opencodeModel)
         _settings.setValue("ollamaEnabled", ollamaEnabled)
-        _settings.setValue("openclawEnabled", _openclawEnabledStored)
+        _settings.setValue("openclawEnabled", openclawEnabledRaw)
         _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
-        _settings.setValue("opencodeEnabled", _opencodeEnabledStored)
-        _settings.setValue("piEnabled", _piEnabledStored)
+        _settings.setValue("opencodeEnabled", opencodeEnabledRaw)
+        _settings.setValue("piEnabled", piEnabledRaw)
         _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
         _settings.setValue("openclawInstances", openclawInstances)
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
@@ -348,7 +342,7 @@ QtObject {
 
         if (openclawInstances === "[]") {
             if (openclawUrl !== "http://127.0.0.1:18789" || openclawToken !== "") {
-                var migratedInstance = {
+                const migratedInstance = {
                     id: generateUuid(),
                     displayName: "OpenClaw",
                     url: openclawUrl,

@@ -14,7 +14,6 @@
 #include <QJsonDocument>
 #include <QMap>
 #include <QVariantMap>
-#include <QMutex>
 
 class McpProcess : public QObject
 {
@@ -43,7 +42,6 @@ public:
     Q_INVOKABLE void start();
     Q_INVOKABLE void stop();
     Q_INVOKABLE void sendMessage(const QString &jsonMessage, int requestId);
-    Q_INVOKABLE QString getToolsJson() const;
 
 Q_SIGNALS:
     void statusChanged(const QString &status);
@@ -74,8 +72,6 @@ private:
     QString m_serverName;
     int m_toolCount;
     QString m_buffer;
-    QMap<int, QString> m_pendingRequests;
-    QString m_toolsJson;
     bool m_initialized;
 };
 
@@ -93,7 +89,6 @@ public:
     Q_INVOKABLE void sendMessage(const QString &serverId, const QString &jsonMessage, int requestId);
     Q_INVOKABLE QString getProcessStatus(const QString &serverId) const;
     Q_INVOKABLE int getToolCount(const QString &serverId) const;
-    Q_INVOKABLE QString getToolsJson(const QString &serverId) const;
     Q_INVOKABLE bool hasProcess(const QString &serverId) const;
 
 Q_SIGNALS:

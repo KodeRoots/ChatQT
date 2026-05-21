@@ -58,139 +58,57 @@ Kirigami.Page {
     property var activeXhr: null
     property string currentSessionId: ""
     property var mcpFunctions: []
-    property int mcpToolCallDepth: 0
-    readonly property int mcpMaxToolCallDepth: 10
     property var sessionLoadingState: ({})
     property string streamingSessionId: ""
     property var sessionPromptArrays: ({})
 
     function initMcpServers() {
-        var servers = appSettings.getMcpServers()
-        for (var i = 0; i < servers.length; i++) {
-            if (servers[i].enabled) {
-                initMcpServer(servers[i])
-            }
-        }
+        McpOrchestrator.initMcpServers(appSettings, McpClient, McpProcessManager, initMcpServer)
     }
 
     function initMcpServer(server) {
-        var state = McpClient.getServerState(server.id)
-        if (state && (state.status === "connected" || state.status === "connecting")) return
-
-        var displayName = server.displayName || server.id
-        applicationWindow().showPassiveNotification(i18n("Connecting to %1…").arg(displayName))
-
-        if (server.type === "stdio") {
-            if (!server.command) {
-                applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no command configured").arg(displayName))
-                return
-            }
-            var envMap = {}
-            if (server.env) { try { envMap = JSON.parse(server.env) } catch (e) {} }
-            var argsList = []
-            if (server.args) { argsList = server.args.split(/\s+/).filter(function(a) { return a.length > 0 }) }
-            _mcpStartupNotifications[server.id] = displayName
-            McpProcessManager.startProcess(server.id, server.command, argsList, envMap)
-        } else {
-            if (!server.url) {
-                applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no URL configured").arg(displayName))
-                return
-            }
-            var headers = {}
-            if (server.token) { headers["Authorization"] = "Bearer " + server.token }
-            if (server.headers) {
-                try {
-                    var customHeaders = JSON.parse(server.headers)
-                    var keys = Object.keys(customHeaders)
-                    for (var k = 0; k < keys.length; k++) { headers[keys[k]] = customHeaders[keys[k]] }
-                } catch (e) {}
-            }
-            McpClient.initializeServer(
-                server.url, headers,
-                function(result) {
-                    McpClient.updateServerState(server.id, {
-                        status: "connected", sessionId: result.sessionId,
-                        serverInfo: result.serverInfo, capabilities: result.capabilities,
-                        headers: headers, url: server.url.replace(/\/$/, ''), type: "remote"
-                    })
-                    McpClient.listTools(
-                        server.url, result.sessionId, headers,
-                        function(tools) {
-                            McpClient.updateServerState(server.id, { tools: tools, toolCount: tools.length })
-                            applicationWindow().showPassiveNotification(
-                                i18n("Connected to %1 — %2 tool(s) available").arg(displayName).arg(tools.length)
-                            )
-                        },
-                        function() {
-                            McpClient.updateServerState(server.id, { tools: [], toolCount: 0 })
-                            applicationWindow().showPassiveNotification(
-                                i18n("Connected to %1 but failed to list tools").arg(displayName)
-                            )
-                        }
-                    )
-                },
-                function(code, message) {
-                    McpClient.updateServerState(server.id, { status: "error" })
-                    applicationWindow().showPassiveNotification(
-                        i18n("Failed to connect to %1: %2").arg(displayName).arg(message)
-                    )
-                }
-            )
-        }
+        McpOrchestrator.initMcpServer(server, {
+            McpClient: McpClient,
+            McpProcessManager: McpProcessManager,
+            i18n: i18n,
+            showNotification: function(msg) { applicationWindow().showPassiveNotification(msg) }
+        })
     }
 
     function gatherMcpFunctions() {
-        var functions = []
-        var servers = appSettings.getEnabledMcpServers()
-        for (var i = 0; i < servers.length; i++) {
-            var state = McpClient.getServerState(servers[i].id)
-            if (state && state.tools && state.tools.length > 0) {
-                var converted = McpClient.mcpToolsToOpenAiFunctions(state.tools)
-                for (var j = 0; j < converted.length; j++) {
-                    functions.push(converted[j])
-                }
-            }
-        }
-        return functions
+        return McpOrchestrator.gatherMcpFunctions(appSettings, McpClient)
     }
 
     function hasConnectedMcpServers() {
-        var servers = appSettings.getEnabledMcpServers()
-        for (var i = 0; i < servers.length; i++) {
-            var state = McpClient.getServerState(servers[i].id)
-            if (state && state.status === "connected") {
-                return true
-            }
-        }
-        return false
+        return McpOrchestrator.hasConnectedMcpServers(appSettings, McpClient)
     }
 
     function buildProviderOptions() {
-        var options = [
-            { text: "Ollama", value: "ollama" },
-            { text: "OpenCode", value: "opencode" },
-            { text: "Pi", value: "pi" }
+        const options = [
+            { text: "Ollama", value: ProviderConstants.PROVIDERS.OLLAMA },
+            { text: "OpenCode", value: ProviderConstants.PROVIDERS.OPENCODE },
+            { text: "Pi", value: ProviderConstants.PROVIDERS.PI }
         ]
 
         if (appSettings && appSettings.openclawEnabled) {
-            var instances = appSettings.getOpenClawInstances()
-            for (var i = 0; i < instances.length; i++) {
+            const instances = appSettings.getOpenClawInstances()
+            for (let i = 0; i < instances.length; i++) {
                 if (instances[i].enabled) {
                     options.push({
                         text: instances[i].displayName + " (OpenClaw)",
-                        value: "openclaw:" + instances[i].id
+                        value: ProviderConstants.PROVIDERS.OPENCLAW + ":" + instances[i].id
                     })
                 }
             }
         }
 
         if (appSettings && appSettings.openaiCompatibleEnabled) {
-            var providers = appSettings.getOpenaiCompatibleProviders()
-            for (var i = 0; i < providers.length; i++) {
+            const providers = appSettings.getOpenaiCompatibleProviders()
+            for (let i = 0; i < providers.length; i++) {
                 if (providers[i].enabled) {
                     options.push({
                         text: providers[i].displayName + " (OpenAI Compatible)",
-                        value: "openai-compatible:" + providers[i].id
+                        value: ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":" + providers[i].id
                     })
                 }
             }
@@ -203,13 +121,13 @@ Kirigami.Page {
 
     property var enabledProviderOptions: providerOptions.filter(function(opt) {
         if (!appSettings) return true
-        var baseProvider = opt.value.split(":")[0]
+        const baseProvider = opt.value.split(":")[0]
         switch (baseProvider) {
-            case "ollama": return appSettings.ollamaEnabled
-            case "openclaw": return appSettings.openclawEnabled
-            case "openai-compatible": return appSettings.openaiCompatibleEnabled
-            case "opencode": return appSettings.opencodeEnabled
-            case "pi": return appSettings.piEnabled
+            case ProviderConstants.PROVIDERS.OLLAMA: return appSettings.ollamaEnabled
+            case ProviderConstants.PROVIDERS.OPENCLAW: return appSettings.openclawEnabled
+            case ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE: return appSettings.openaiCompatibleEnabled
+            case ProviderConstants.PROVIDERS.OPENCODE: return appSettings.opencodeEnabled
+            case ProviderConstants.PROVIDERS.PI: return appSettings.piEnabled
             default: return true
         }
     })
@@ -227,10 +145,10 @@ Kirigami.Page {
     function switchProvider(newProvider) {
         if (newProvider === appSettings.provider) return;
 
-        if (newProvider.startsWith("openai-compatible:")) {
-            var providerId = newProvider.substring("openai-compatible:".length)
+        if (newProvider.startsWith(ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":")) {
+            var providerId = newProvider.substring(ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE.length + 1)
             appSettings.selectedOpenAICompatibleProviderId = providerId
-            appSettings.provider = "openai-compatible"
+            appSettings.provider = ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE
 
             if (!appSettings.getSelectedOpenAICompatibleProvider()) {
                 var providers = appSettings.getOpenaiCompatibleProviders()
@@ -241,10 +159,10 @@ Kirigami.Page {
                     }
                 }
             }
-        } else if (newProvider.startsWith("openclaw:")) {
-            var instanceId = newProvider.substring("openclaw:".length)
+        } else if (newProvider.startsWith(ProviderConstants.PROVIDERS.OPENCLAW + ":")) {
+            var instanceId = newProvider.substring(ProviderConstants.PROVIDERS.OPENCLAW.length + 1)
             appSettings.selectedOpenClawInstanceId = instanceId
-            appSettings.provider = "openclaw"
+            appSettings.provider = ProviderConstants.PROVIDERS.OPENCLAW
 
             if (!appSettings.getSelectedOpenClawInstance()) {
                 var instances = appSettings.getOpenClawInstances()
@@ -261,7 +179,7 @@ Kirigami.Page {
 
         currentProvider = newProvider;
 
-        if (newProvider === "ollama") {
+        if (newProvider === ProviderConstants.PROVIDERS.OLLAMA) {
             getModels();
         }
 
@@ -275,565 +193,169 @@ Kirigami.Page {
     }
 
     function isProviderConfigured() {
-        const provider = currentProvider;
-        if (provider === "ollama") {
-            return hasLocalModel;
-        } else if (provider.startsWith("openclaw")) {
-            var instance = appSettings.getSelectedOpenClawInstance()
-            return instance && instance.url && instance.token;
-        } else if (provider === "opencode") {
-            return appSettings.opencodeUrl &&
-                   appSettings.opencodeUsername &&
-                   appSettings.opencodePassword;
-        } else if (currentProvider.startsWith("openai-compatible")) {
-            var openaiProvider = appSettings.getSelectedOpenAICompatibleProvider()
-            return openaiProvider && openaiProvider.url && openaiProvider.token && openaiProvider.model;
-        } else if (provider === "pi") {
-            return PiProcessManager.running;
-        }
-        return false;
+        const provider = ProviderRegistry.getProvider(currentProvider);
+        if (!provider) return false;
+        return provider.isConfigured({
+            appSettings: appSettings,
+            hasLocalModel: hasLocalModel,
+            PiProcessManager: PiProcessManager
+        });
     }
 
     function getProviderNotConfiguredMessage() {
-        if (currentProvider === "ollama") {
-            return i18n("No local model found.\nPlease install some first.\n\nIf you need help, check Ollama documentation.");
-        } else if (currentProvider.startsWith("openclaw")) {
-            return i18n("OpenClaw instance not configured.\nPlease set URL and Token in settings.");
-        } else if (currentProvider === "opencode") {
-            return i18n("OpenCode not configured.\nPlease set URL, Username, Password and Model in settings.");
-        } else if (currentProvider.startsWith("openai-compatible")) {
-            return i18n("OpenAI Compatible provider not configured.\nPlease configure it in settings.");
-        } else if (currentProvider === "pi") {
-            return i18n("Pi is not running.\nPlease start it in Settings or check the binary path.");
-        }
-        return i18n("Provider not configured.");
+        const provider = ProviderRegistry.getProvider(currentProvider);
+        if (!provider) return i18n("Provider not configured.");
+        return provider.notConfiguredMessage({
+            appSettings: appSettings,
+            i18n: i18n,
+            PiProcessManager: PiProcessManager
+        });
     }
 
     function handleStreaming(text, oldLength, listModel, thinkingText, capturedSessionId) {
-        var sessionId = capturedSessionId || currentSessionId
-        var isActiveSession = sessionId === currentSessionId
-
-        isStreaming = isActiveSession;
-
-        if (isActiveSession && !disableAutoScroll && listView.contentHeight > listView.height) {
-            listView.positionViewAtEnd();
-        }
-
-        if (isActiveSession) {
-            if (listModel.count === oldLength) {
-                listModel.append({
-                    "name": "Assistant",
-                    "content": text,
-                    "thinkingContent": thinkingText !== undefined ? thinkingText : "",
-                    "isError": false
-                });
-                SessionStore.addMessage(sessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
-            } else {
-                listModel.setProperty(oldLength, "content", text);
-                if (thinkingText !== undefined) {
-                    listModel.setProperty(oldLength, "thinkingContent", thinkingText);
-                }
-            }
-        } else {
-            if (SessionStore.getLastMessage(sessionId).role !== "assistant") {
-                SessionStore.addMessage(sessionId, "assistant", text, thinkingText !== undefined ? thinkingText : "")
-            } else {
-                SessionStore.updateLastAssistantMessage(sessionId, text, thinkingText !== undefined ? thinkingText : "")
-            }
-        }
+        const sessionId = capturedSessionId || currentSessionId
+        StreamingHandler.handleStreaming(text, oldLength, listModel, thinkingText, sessionId, {
+            currentSessionId: currentSessionId,
+            disableAutoScroll: disableAutoScroll,
+            listView: listView,
+            SessionStore: SessionStore,
+            setIsStreaming: function(v) { isStreaming = v }
+        })
     }
 
     function handleRequestComplete(oldLength, listModel, finalText, toolCalls, capturedSessionId) {
-        if (activeXhr === null && mcpToolCallDepth === 0 && !capturedSessionId) return;
-
-        var sessionId = capturedSessionId || currentSessionId
-        var isActiveSession = sessionId === currentSessionId
-
-        var isOllamaError = currentProvider === "ollama" && finalText && (
-            finalText.indexOf("does not support") !== -1 ||
-            finalText.indexOf("Ollama error") !== -1 ||
-            finalText.startsWith("{\"error\"")
-        )
-
-        if (isOllamaError) {
-            if (isActiveSession && listModel.count > oldLength) {
-                listModel.setProperty(oldLength, "isError", true);
-                listModel.setProperty(oldLength, "name", "Error");
-                listModel.setProperty(oldLength, "thinkingContent", "");
-            }
-            if (sessionId !== "") {
-                SessionStore.markLastAssistantAsError(sessionId);
-            }
-            if (isActiveSession) {
-                isLoading = false;
-                isStreaming = false;
-            }
-            activeXhr = null;
-            mcpToolCallDepth = 0;
-            streamingSessionId = ""
-            sessionLoadingState[sessionId] = false
-            updateSessionLoadingState(sessionId, false)
-            return;
-        }
-
-        if (toolCalls && toolCalls.length > 0 && mcpToolCallDepth < mcpMaxToolCallDepth) {
-            handleMcpToolCalls(oldLength, listModel, finalText, toolCalls, sessionId)
-            return
-        }
-
-        if (toolCalls && toolCalls.length > 0 && mcpToolCallDepth >= mcpMaxToolCallDepth) {
-            console.warn("MCP tool call depth limit reached (" + mcpMaxToolCallDepth + ")")
-        }
-
-        var sessionPA = sessionPromptArrays[sessionId] || promptArray
-        if (isActiveSession && listModel.count > oldLength) {
-            var lastValue = listModel.get(oldLength);
-            sessionPA.push({ "role": "assistant", "content": lastValue.content, "images": [] });
-        } else if (!isActiveSession) {
-            sessionPA.push({ "role": "assistant", "content": finalText || "", "images": [] });
-        }
-        sessionPromptArrays[sessionId] = sessionPA
-
-        if (sessionId !== "") {
-            var finalContent = finalText || ""
-            if (isActiveSession && listModel.count > oldLength) {
-                var lastMsg = listModel.get(oldLength);
-                finalContent = lastMsg.content
-                SessionStore.finalizeLastAssistantMessage(sessionId, finalContent, lastMsg.thinkingContent || "");
-            } else {
-                SessionStore.finalizeLastAssistantMessage(sessionId, finalContent, "")
-            }
-            refreshSessionList()
-        }
-
-        if (isActiveSession) {
-            isLoading = false;
-            isStreaming = false;
-        }
-        activeXhr = null;
-        mcpToolCallDepth = 0;
-        streamingSessionId = ""
-        sessionLoadingState[sessionId] = false
-        updateSessionLoadingState(sessionId, false)
+        StreamingHandler.handleRequestComplete(oldLength, listModel, finalText, toolCalls, capturedSessionId, {
+            activeXhr: activeXhr,
+            currentSessionId: currentSessionId,
+            currentProvider: currentProvider,
+            setIsLoading: function(v) { isLoading = v },
+            setIsStreaming: function(v) { isStreaming = v },
+            setActiveXhr: function(v) { activeXhr = v },
+            setStreamingSessionId: function(v) { streamingSessionId = v },
+            sessionPromptArrays: sessionPromptArrays,
+            promptArray: promptArray,
+            SessionStore: SessionStore,
+            refreshSessionList: refreshSessionList,
+            updateSessionLoadingState: updateSessionLoadingState,
+            getToolCallDepth: McpOrchestrator.getToolCallDepth,
+            resetToolCallDepth: McpOrchestrator.resetToolCallDepth,
+            maxToolCallDepth: McpOrchestrator.MAX_TOOL_CALL_DEPTH,
+            handleMcpToolCallsWrapper: handleMcpToolCalls
+        })
     }
 
+
     function handleMcpToolCalls(oldLength, listModel, finalText, toolCalls, capturedSessionId) {
-        var sessionId = capturedSessionId || currentSessionId
-        var isActiveSession = sessionId === currentSessionId
-        mcpToolCallDepth++
-
-        if (isActiveSession) {
-            if (listModel.count === oldLength) {
-                var displayText = finalText || ""
-                if (displayText === "" && toolCalls.length > 0) {
-                    var toolNames = []
-                    for (var t = 0; t < toolCalls.length; t++) {
-                        toolNames.push(toolCalls[t].function.name)
-                    }
-                    displayText = i18n("Calling tools: %1", toolNames.join(", "))
-                }
-
-                listModel.append({
-                    "name": "Assistant",
-                    "content": displayText,
-                    "thinkingContent": ""
-                })
-            } else {
-                if (finalText) {
-                    listModel.setProperty(oldLength, "content", finalText)
-                }
-            }
-        }
-
-        var assistantMsg = { "role": "assistant", "content": finalText || "" }
-        if (toolCalls.length > 0) {
-            assistantMsg["tool_calls"] = toolCalls
-        }
-
-        var sessionPA = sessionPromptArrays[sessionId] || promptArray
-        sessionPA.push(assistantMsg)
-        sessionPromptArrays[sessionId] = sessionPA
-
-        if (sessionId !== "") {
-            SessionStore.addMessage(sessionId, "assistant", finalText || "", "")
-        }
-
-        var pendingToolCalls = []
-        for (var i = 0; i < toolCalls.length; i++) {
-            pendingToolCalls.push(toolCalls[i])
-        }
-
-        executeNextMcpToolCall(pendingToolCalls, 0, oldLength, listModel, sessionId)
+        McpOrchestrator.handleMcpToolCalls(oldLength, listModel, finalText, toolCalls, capturedSessionId, {
+            currentSessionId: currentSessionId,
+            i18n: i18n,
+            SessionStore: SessionStore,
+            promptArray: promptArray,
+            sessionPromptArrays: sessionPromptArrays,
+            sendMcpFollowUpRequest: sendMcpFollowUpRequest
+        })
     }
 
     function executeNextMcpToolCall(toolCalls, currentIndex, oldLength, listModel, capturedSessionId) {
-        var sessionId = capturedSessionId || currentSessionId
-        var isActiveSession = sessionId === currentSessionId
-
-        if (currentIndex >= toolCalls.length) {
-            sendMcpFollowUpRequest(oldLength, listModel, sessionId)
-            return
-        }
-
-        var toolCall = toolCalls[currentIndex]
-        var funcName = toolCall.function.name
-        var funcArgs = {}
-        try {
-            var rawArgs = toolCall.function.arguments
-            if (typeof rawArgs === 'object' && rawArgs !== null) {
-                funcArgs = rawArgs
-            } else {
-                funcArgs = JSON.parse(rawArgs || "{}")
-            }
-        } catch (e) {
-            funcArgs = {}
-        }
-
-        var mcpToolName = McpClient.parseToolCallName(funcName)
-        var isMcp = McpClient.isMcpToolCall(funcName)
-
-        listModel.append({
-            "name": "Tool",
-            "content": i18n("Calling %1…").arg(funcName),
-            "thinkingContent": ""
+        McpOrchestrator.executeNextMcpToolCall(toolCalls, currentIndex, oldLength, listModel, capturedSessionId, {
+            currentSessionId: currentSessionId,
+            McpClient: McpClient,
+            appSettings: appSettings,
+            i18n: i18n,
+            promptArray: promptArray,
+            SessionStore: SessionStore,
+            sendMcpFollowUpRequest: sendMcpFollowUpRequest
         })
-
-        if (!isMcp) {
-            var errorMsg = i18n("Tool %1 is not an MCP tool").arg(funcName)
-            if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg)
-            promptArray.push({
-                "role": "tool",
-                "tool_call_id": toolCall.id,
-                "content": errorMsg
-            })
-            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
-            return
-        }
-
-        var servers = appSettings.getEnabledMcpServers()
-        var foundServer = null
-        var foundTools = null
-
-        for (var s = 0; s < servers.length; s++) {
-            var state = McpClient.getServerState(servers[s].id)
-            if (state && state.tools) {
-                for (var t = 0; t < state.tools.length; t++) {
-                    if (state.tools[t].name === mcpToolName) {
-                        foundServer = servers[s]
-                        foundTools = state
-                        break
-                    }
-                }
-                if (foundServer) break
-            }
-        }
-
-        if (!foundServer) {
-            var errorMsg2 = i18n("MCP server not found for tool %1").arg(funcName)
-            if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg2)
-            promptArray.push({
-                "role": "tool",
-                "tool_call_id": toolCall.id,
-                "content": errorMsg2
-            })
-            executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
-            return
-        }
-
-        if (foundServer.type === "stdio" || foundTools.type === "stdio") {
-            callStdioMcpTool(foundServer.id, mcpToolName, funcArgs, toolCall.id, funcName, listModel, toolCalls, currentIndex, oldLength, sessionId)
-            return
-        }
-
-        McpClient.callTool(
-            foundServer.url,
-            foundTools.sessionId,
-            foundTools.headers,
-            mcpToolName,
-            funcArgs,
-            function(result) {
-                var resultContent = result.content || ""
-                if (result.isError) {
-                    resultContent = i18n("Error: %1").arg(resultContent)
-                }
-
-                if (isActiveSession) {
-                    listModel.setProperty(listModel.count - 1, "content",
-                        i18n("%1: %2").arg(funcName).arg(resultContent.substring(0, 500)))
-                }
-
-                if (sessionId !== "") {
-                    SessionStore.addMessage(sessionId, "tool",
-                        i18n("%1 result: %2").arg(funcName).arg(resultContent.substring(0, 500)), "")
-                }
-
-                promptArray.push({
-                    "role": "tool",
-                    "tool_call_id": toolCall.id,
-                    "content": resultContent
-                })
-
-                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
-            },
-            function(code, message) {
-                var errorMsg3 = i18n("Tool %1 failed: %2").arg(funcName).arg(message)
-                if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg3)
-
-                promptArray.push({
-                    "role": "tool",
-                    "tool_call_id": toolCall.id,
-                    "content": errorMsg3
-                })
-
-                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
-            }
-        )
     }
 
     function callStdioMcpTool(serverId, toolName, arguments, toolCallId, funcName, listModel, toolCalls, currentIndex, oldLength, capturedSessionId) {
-        var request = McpClient.createJsonRpcRequest("tools/call", {
-            name: toolName,
-            arguments: arguments
+        McpOrchestrator.callStdioMcpTool(serverId, toolName, arguments, toolCallId, funcName, listModel, toolCalls, currentIndex, oldLength, capturedSessionId, {
+            McpClient: McpClient,
+            McpProcessManager: McpProcessManager
         })
-        var requestId = request.id
-        var jsonStr = JSON.stringify(request)
-
-        var pendingCalls = {}
-
-        pendingCalls[requestId] = {
-            toolCallId: toolCallId,
-            funcName: funcName,
-            listModel: listModel,
-            toolCalls: toolCalls,
-            currentIndex: currentIndex,
-            oldLength: oldLength,
-            capturedSessionId: capturedSessionId
-        }
-
-        if (!_stdioPendingCalls) _stdioPendingCalls = {}
-        _stdioPendingCalls[requestId] = pendingCalls[requestId]
-
-        McpProcessManager.sendMessage(serverId, jsonStr, requestId)
     }
 
-    property var _stdioPendingCalls: ({})
-    property var _mcpStartupNotifications: ({})
 
     Connections {
         target: McpProcessManager
 
         function onMessageReceived(serverId, jsonMessage) {
-            try {
-                var response = JSON.parse(jsonMessage)
-
-                if (response.result && response.result.tools) {
-                    McpClient.updateServerState(serverId, {
-                        status: "connected",
-                        tools: response.result.tools,
-                        toolCount: response.result.tools.length,
-                        type: "stdio",
-                        serverId: serverId
+            McpOrchestrator.handleStdioMessage(serverId, jsonMessage, {
+                McpClient: McpClient,
+                McpProcessManager: McpProcessManager,
+                currentSessionId: currentSessionId,
+                i18n: i18n,
+                promptArray: promptArray,
+                SessionStore: SessionStore,
+                showNotification: function(msg) { applicationWindow().showPassiveNotification(msg) },
+                executeNextMcpToolCall: function(toolCalls, currentIndex, oldLength, listModel, sessionId, deps) {
+                    McpOrchestrator.executeNextMcpToolCall(toolCalls, currentIndex, oldLength, listModel, sessionId, deps || {
+                        currentSessionId: currentSessionId,
+                        McpClient: McpClient,
+                        appSettings: appSettings,
+                        i18n: i18n,
+                        promptArray: promptArray,
+                        SessionStore: SessionStore,
+                        sendMcpFollowUpRequest: sendMcpFollowUpRequest
                     })
-                    if (_mcpStartupNotifications[serverId]) {
-                        applicationWindow().showPassiveNotification(
-                            i18n("Connected to %1 — %2 tool(s) available").arg(_mcpStartupNotifications[serverId]).arg(response.result.tools.length)
-                        )
-                        delete _mcpStartupNotifications[serverId]
-                    }
                 }
-
-                if (response.method === "notifications/tools/list_changed") {
-                    var requestId = McpClient.getNextRequestId()
-                    var toolsRequest = McpClient.createJsonRpcRequest("tools/list", {})
-                    McpProcessManager.sendMessage(serverId, JSON.stringify(toolsRequest), requestId)
-                }
-
-                if (!response.id || !_stdioPendingCalls || !_stdioPendingCalls[response.id]) return
-
-                var pending = _stdioPendingCalls[response.id]
-                delete _stdioPendingCalls[response.id]
-
-                if (response.result) {
-                    var resultText = ""
-                    var isError = response.result.isError || false
-
-                    if (response.result.content) {
-                        for (var i = 0; i < response.result.content.length; i++) {
-                            var item = response.result.content[i]
-                            if (item.type === "text") resultText += item.text
-                            else if (item.type === "image") resultText += "[Image data]"
-                            else if (item.type === "audio") resultText += "[Audio data]"
-                            else if (item.type === "resource") resultText += (item.resource.text || item.resource.uri || "[Resource]")
-                        }
-                    }
-
-                    if (isError) {
-                        resultText = i18n("Error: %1").arg(resultText)
-                    }
-
-                    var stdioSessionId = pending.capturedSessionId || currentSessionId
-                    var stdioIsActive = stdioSessionId === currentSessionId
-
-                    if (stdioIsActive) {
-                        pending.listModel.setProperty(pending.listModel.count - 1, "content",
-                            i18n("%1: %2").arg(pending.funcName).arg(resultText.substring(0, 500)))
-                    }
-
-                    if (stdioSessionId !== "") {
-                        SessionStore.addMessage(stdioSessionId, "tool",
-                            i18n("%1 result: %2").arg(pending.funcName).arg(resultText.substring(0, 500)), "")
-                    }
-
-                    promptArray.push({
-                        "role": "tool",
-                        "tool_call_id": pending.toolCallId,
-                        "content": resultText
-                    })
-
-                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel, stdioSessionId)
-                } else if (response.error) {
-                    var errorMsg = i18n("Tool %1 failed: %2").arg(pending.funcName).arg(response.error.message || "Unknown error")
-                    var errSessionId = pending.capturedSessionId || currentSessionId
-                    var errIsActive = errSessionId === currentSessionId
-
-                    if (errIsActive) {
-                        pending.listModel.setProperty(pending.listModel.count - 1, "content", errorMsg)
-                    }
-
-                    promptArray.push({
-                        "role": "tool",
-                        "tool_call_id": pending.toolCallId,
-                        "content": errorMsg
-                    })
-
-                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel, errSessionId)
-                }
-            } catch (e) {
-                console.warn("Failed to process stdio MCP response:", e)
-            }
+            })
         }
 
         function onProcessStatusChanged(serverId, status) {
-            if (status === "connected") {
-                McpClient.updateServerState(serverId, { status: "connected" })
-            } else if (status === "disconnected") {
-                McpClient.updateServerState(serverId, { status: "disconnected", tools: [], toolCount: 0 })
-                if (_mcpStartupNotifications[serverId]) {
-                    applicationWindow().showPassiveNotification(
-                        i18n("%1 disconnected").arg(_mcpStartupNotifications[serverId])
-                    )
-                    delete _mcpStartupNotifications[serverId]
-                }
-            } else if (status === "error") {
-                McpClient.updateServerState(serverId, { status: "error", tools: [], toolCount: 0 })
-                if (_mcpStartupNotifications[serverId]) {
-                    applicationWindow().showPassiveNotification(
-                        i18n("Failed to start %1").arg(_mcpStartupNotifications[serverId])
-                    )
-                    delete _mcpStartupNotifications[serverId]
-                }
-            }
+            McpOrchestrator.handleProcessStatusChanged(serverId, status, {
+                McpClient: McpClient,
+                i18n: i18n,
+                showNotification: function(msg) { applicationWindow().showPassiveNotification(msg) }
+            })
         }
 
         function onProcessError(serverId, errorMessage) {
-            McpClient.updateServerState(serverId, { status: "error" })
-            if (_mcpStartupNotifications[serverId]) {
-                applicationWindow().showPassiveNotification(
-                    i18n("Failed to start %1: %2").arg(_mcpStartupNotifications[serverId]).arg(errorMessage)
-                )
-                delete _mcpStartupNotifications[serverId]
-            }
+            McpOrchestrator.handleProcessError(serverId, errorMessage, {
+                McpClient: McpClient,
+                i18n: i18n,
+                showNotification: function(msg) { applicationWindow().showPassiveNotification(msg) }
+            })
         }
     }
 
     function sendMcpFollowUpRequest(oldLength, listModel, capturedSessionId) {
-        var sessionId = capturedSessionId || currentSessionId
-        var isActiveSession = sessionId === currentSessionId
+        const sessionId = capturedSessionId || currentSessionId
+        const isActiveSession = sessionId === currentSessionId
 
-        var streamingCb = isActiveSession ? handleStreaming : function() {}
-        var completeCb = function(ol, lm, finalText, toolCalls) {
+        const streamingCb = isActiveSession ? handleStreaming : function() {}
+        const completeCb = function(ol, lm, finalText, toolCalls) {
             handleRequestComplete(ol, lm, finalText, toolCalls, sessionId)
         }
 
-        if (currentProvider.startsWith("openai-compatible:")) {
-            var provider = appSettings.getSelectedOpenAICompatibleProvider()
-            if (provider) {
-                var mcpFuncs = gatherMcpFunctions()
-                activeXhr = ApiClient.requestOpenAICompatible(
-                    provider.url,
-                    provider.token,
-                    provider.model,
-                    promptArray,
-                    thinkingEnabled,
-                    null,
-                    false,
-                    listModel,
-                    streamingCb,
-                    completeCb,
-                    mcpFuncs.length > 0 ? mcpFuncs : undefined
-                )
-            }
-        } else if (currentProvider === "ollama") {
-            var ollamaMcpFuncs = gatherMcpFunctions()
-            activeXhr = ApiClient.requestOllama(
-                currentModel,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb,
-                thinkingEnabled,
-                ollamaMcpFuncs.length > 0 ? ollamaMcpFuncs : undefined
-            )
-        } else if (currentProvider.startsWith("openclaw")) {
-            var instance = appSettings.getSelectedOpenClawInstance()
-            if (instance) {
-                activeXhr = ApiClient.requestOpenAICompatible(
-                    instance.url,
-                    instance.token,
-                    "openclaw",
-                    promptArray,
-                    thinkingEnabled,
-                    { "x-openclaw-agent-id": "main" },
-                    true,
-                    listModel,
-                    streamingCb,
-                    completeCb
-                )
-            }
-        } else if (currentProvider === "opencode") {
-            activeXhr = OpenCodeClient.requestOpenCode(
-                appSettings.opencodeUrl,
-                appSettings.opencodeUsername,
-                appSettings.opencodePassword,
-                appSettings.opencodeModel,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            )
-        } else if (currentProvider === "pi") {
-            activeXhr = PiClient.requestPi(
-                PiProcessManager,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            )
+        const mcpFuncs = gatherMcpFunctions()
+        const provider = ProviderRegistry.getProvider(currentProvider);
+        if (provider) {
+            activeXhr = provider.sendMcpFollowUp({
+                appSettings: appSettings,
+                model: currentModel,
+                promptArray: promptArray,
+                listModel: listModel,
+                onStreaming: streamingCb,
+                onComplete: completeCb,
+                thinkingEnabled: thinkingEnabled,
+                mcpFunctions: mcpFuncs,
+                ApiClient: ApiClient,
+                OpenCodeClient: OpenCodeClient,
+                PiClient: PiClient,
+                PiProcessManager: PiProcessManager
+            });
         }
     }
 
     function cancelRequest() {
         if (!isLoading) return "";
 
-        var wasStreamingBeforeAbort = isStreaming;
+        const wasStreamingBeforeAbort = isStreaming;
 
-        // Abort active request based on provider
-        if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
-            ApiClient.abortActiveRequest();
-        } else if (currentProvider === "opencode") {
-            OpenCodeClient.abortActiveRequest();
-        } else if (currentProvider === "pi") {
-            PiClient.abortActiveRequest();
+        const provider = ProviderRegistry.getProvider(currentProvider);
+        if (provider) {
+            provider.abortRequest({ ApiClient: ApiClient, OpenCodeClient: OpenCodeClient, PiClient: PiClient });
         }
         activeXhr = null;
 
@@ -864,13 +386,9 @@ Kirigami.Page {
     function stopRequest() {
         if (!isLoading) return;
 
-        // Abort active request
-        if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
-            ApiClient.abortActiveRequest();
-        } else if (currentProvider === "opencode") {
-            OpenCodeClient.abortActiveRequest();
-        } else if (currentProvider === "pi") {
-            PiClient.abortActiveRequest();
+        const provider = ProviderRegistry.getProvider(currentProvider);
+        if (provider) {
+            provider.abortRequest({ ApiClient: ApiClient, OpenCodeClient: OpenCodeClient, PiClient: PiClient });
         }
         activeXhr = null;
 
@@ -920,17 +438,17 @@ Kirigami.Page {
         if (currentSessionId === "") {
             var providerName = currentProvider
             var modelName = currentModel || ""
-            if (currentProvider.startsWith("openclaw")) {
+            if (currentProvider.startsWith(ProviderConstants.PROVIDERS.OPENCLAW)) {
                 var instance = appSettings.getSelectedOpenClawInstance()
                 if (instance) {
-                    providerName = "openclaw:" + instance.id
+                    providerName = ProviderConstants.PROVIDERS.OPENCLAW + ":" + instance.id
                     modelName = instance.displayName || "openclaw"
                 }
-            } else if (currentProvider.startsWith("openai-compatible:")) {
-                var provider = appSettings.getSelectedOpenAICompatibleProvider()
-                if (provider) {
-                    providerName = "openai-compatible:" + provider.id
-                    modelName = provider.displayName || provider.model || "unknown"
+            } else if (currentProvider.startsWith(ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":")) {
+                var openaiProvider = appSettings.getSelectedOpenAICompatibleProvider()
+                if (openaiProvider) {
+                    providerName = ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":" + openaiProvider.id
+                    modelName = openaiProvider.displayName || openaiProvider.model || "unknown"
                 }
             }
             currentSessionId = SessionStore.createSession(providerName, modelName)
@@ -945,17 +463,17 @@ Kirigami.Page {
 
         var currentProviderName = currentProvider
         var currentModelName = currentModel || ""
-        if (currentProvider.startsWith("openclaw")) {
+        if (currentProvider.startsWith(ProviderConstants.PROVIDERS.OPENCLAW)) {
             var instance = appSettings.getSelectedOpenClawInstance()
             if (instance) {
-                currentProviderName = "openclaw:" + instance.id
+                currentProviderName = ProviderConstants.PROVIDERS.OPENCLAW + ":" + instance.id
                 currentModelName = instance.displayName || "openclaw"
             }
-        } else if (currentProvider.startsWith("openai-compatible:")) {
-            var provider = appSettings.getSelectedOpenAICompatibleProvider()
-            if (provider) {
-                currentProviderName = "openai-compatible:" + provider.id
-                currentModelName = provider.displayName || provider.model || "unknown"
+        } else if (currentProvider.startsWith(ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":")) {
+            var openaiProv = appSettings.getSelectedOpenAICompatibleProvider()
+            if (openaiProv) {
+                currentProviderName = ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":" + openaiProv.id
+                currentModelName = openaiProv.displayName || openaiProv.model || "unknown"
             }
         }
         SessionStore.updateSessionProvider(currentSessionId, currentProviderName, currentModelName)
@@ -972,7 +490,7 @@ Kirigami.Page {
 
         isLoading = true;
         listView.positionViewAtEnd();
-        mcpToolCallDepth = 0;
+        McpOrchestrator.resetToolCallDepth()
 
         sessionLoadingState[capturedSessionId] = true
         streamingSessionId = capturedSessionId
@@ -980,78 +498,32 @@ Kirigami.Page {
 
         mcpFunctions = gatherMcpFunctions()
 
-        var streamingCb = function(text, ol, lm, thinking) {
+        const streamingCb = function(text, ol, lm, thinking) {
             handleStreaming(text, ol, lm, thinking, capturedSessionId)
             if (capturedSessionId !== "" && !streamingSaveTimer.running) {
                 streamingSaveTimer.start()
             }
         }
-        var completeCb = function(ol, lm, finalText, toolCalls) {
+        const completeCb = function(ol, lm, finalText, toolCalls) {
             handleRequestComplete(ol, lm, finalText, toolCalls, capturedSessionId)
         }
 
-        if (currentProvider === "ollama") {
-            activeXhr = ApiClient.requestOllama(
-                currentModel,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb,
-                thinkingEnabled,
-                mcpFunctions.length > 0 ? mcpFunctions : undefined
-            );
-        } else if (currentProvider.startsWith("openclaw")) {
-            var instance = appSettings.getSelectedOpenClawInstance()
-            if (instance) {
-                activeXhr = ApiClient.requestOpenAICompatible(
-                    instance.url,
-                    instance.token,
-                    "openclaw",
-                    promptArray,
-                    thinkingEnabled,
-                    { "x-openclaw-agent-id": "main" },
-                    true,
-                    listModel,
-                    streamingCb,
-                    completeCb
-                );
-            }
-        } else if (currentProvider.startsWith("openai-compatible:")) {
-            var provider = appSettings.getSelectedOpenAICompatibleProvider()
-            if (provider) {
-                activeXhr = ApiClient.requestOpenAICompatible(
-                    provider.url,
-                    provider.token,
-                    provider.model,
-                    promptArray,
-                    thinkingEnabled,
-                    null,
-                    false,
-                    listModel,
-                    streamingCb,
-                    completeCb,
-                    mcpFunctions.length > 0 ? mcpFunctions : undefined
-                );
-            }
-        } else if (currentProvider === "opencode") {
-            activeXhr = OpenCodeClient.requestOpenCode(
-                appSettings.opencodeUrl,
-                appSettings.opencodeUsername,
-                appSettings.opencodePassword,
-                appSettings.opencodeModel,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            );
-        } else if (currentProvider === "pi") {
-            activeXhr = PiClient.requestPi(
-                PiProcessManager,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            );
+        const provider = ProviderRegistry.getProvider(currentProvider);
+        if (provider) {
+            activeXhr = provider.sendRequest({
+                appSettings: appSettings,
+                model: currentModel,
+                promptArray: promptArray,
+                listModel: listModel,
+                onStreaming: streamingCb,
+                onComplete: completeCb,
+                thinkingEnabled: thinkingEnabled,
+                mcpFunctions: mcpFunctions,
+                ApiClient: ApiClient,
+                OpenCodeClient: OpenCodeClient,
+                PiClient: PiClient,
+                PiProcessManager: PiProcessManager
+            });
         }
     }
 
@@ -1108,15 +580,15 @@ Kirigami.Page {
     }
 
     function getProviderLabel(provider, model) {
-        if (provider === "ollama") {
+        if (provider === ProviderConstants.PROVIDERS.OLLAMA) {
             return "Ollama · " + (model || "unknown");
-        } else if (provider.startsWith("openclaw:")) {
+        } else if (provider.startsWith(ProviderConstants.PROVIDERS.OPENCLAW + ":")) {
             return model || "OpenClaw";
-        } else if (provider.startsWith("openai-compatible:")) {
+        } else if (provider.startsWith(ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":")) {
             return model || "OpenAI Compatible";
-        } else if (provider === "opencode") {
+        } else if (provider === ProviderConstants.PROVIDERS.OPENCODE) {
             return "OpenCode";
-        } else if (provider === "pi") {
+        } else if (provider === ProviderConstants.PROVIDERS.PI) {
             return "Pi";
         }
         return provider;
@@ -1139,7 +611,7 @@ Kirigami.Page {
             switchProvider(sessionProvider)
         }
 
-        if (currentProvider === "ollama" && sessionModelName !== "" && sessionModelName !== currentModel) {
+        if (currentProvider === ProviderConstants.PROVIDERS.OLLAMA && sessionModelName !== "" && sessionModelName !== currentModel) {
             currentModel = sessionModelName
         }
 
@@ -1200,28 +672,28 @@ Kirigami.Page {
     }
 
     Component.onCompleted: {
-        if (currentProvider === "openclaw") {
+        if (currentProvider === ProviderConstants.PROVIDERS.OPENCLAW) {
             if (appSettings.selectedOpenClawInstanceId) {
-                currentProvider = "openclaw:" + appSettings.selectedOpenClawInstanceId
+                currentProvider = ProviderConstants.PROVIDERS.OPENCLAW + ":" + appSettings.selectedOpenClawInstanceId
             } else {
                 var instances = appSettings.getOpenClawInstances()
                 for (var i = 0; i < instances.length; i++) {
                     if (instances[i].enabled) {
-                        currentProvider = "openclaw:" + instances[i].id
+                        currentProvider = ProviderConstants.PROVIDERS.OPENCLAW + ":" + instances[i].id
                         appSettings.selectedOpenClawInstanceId = instances[i].id
                         break
                     }
                 }
             }
         }
-        if (currentProvider === "openai-compatible") {
+        if (currentProvider === ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE) {
             if (appSettings.selectedOpenAICompatibleProviderId) {
-                currentProvider = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
+                currentProvider = ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":" + appSettings.selectedOpenAICompatibleProviderId
             } else {
                 var providers = appSettings.getOpenaiCompatibleProviders()
                 for (var i = 0; i < providers.length; i++) {
                     if (providers[i].enabled) {
-                        currentProvider = "openai-compatible:" + providers[i].id
+                        currentProvider = ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":" + providers[i].id
                         appSettings.selectedOpenAICompatibleProviderId = providers[i].id
                         break
                     }
@@ -1229,13 +701,13 @@ Kirigami.Page {
             }
         }
 
-        if (currentProvider === "ollama") {
+        if (currentProvider === ProviderConstants.PROVIDERS.OLLAMA) {
             getModels();
         }
 
         initMcpServers()
 
-        if (currentProvider === "pi" && PiProcessManager.autoStart) {
+        if (currentProvider === ProviderConstants.PROVIDERS.PI && PiProcessManager.autoStart) {
             PiProcessManager.start();
         }
         messageInput.focusInput();
@@ -1329,11 +801,11 @@ Kirigami.Page {
 
                 currentIndex: {
                     var currentValue = appSettings.provider
-                    if (currentValue === "openai-compatible" && appSettings.selectedOpenAICompatibleProviderId) {
-                        currentValue = "openai-compatible:" + appSettings.selectedOpenAICompatibleProviderId
+                    if (currentValue === ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE && appSettings.selectedOpenAICompatibleProviderId) {
+                        currentValue = ProviderConstants.PROVIDERS.OPENAI_COMPATIBLE + ":" + appSettings.selectedOpenAICompatibleProviderId
                     }
-                    if (currentValue === "openclaw" && appSettings.selectedOpenClawInstanceId) {
-                        currentValue = "openclaw:" + appSettings.selectedOpenClawInstanceId
+                    if (currentValue === ProviderConstants.PROVIDERS.OPENCLAW && appSettings.selectedOpenClawInstanceId) {
+                        currentValue = ProviderConstants.PROVIDERS.OPENCLAW + ":" + appSettings.selectedOpenClawInstanceId
                     }
 
                     for (let i = 0; i < root.enabledProviderOptions.length; i++) {
@@ -1367,7 +839,7 @@ Kirigami.Page {
         Kirigami.InlineMessage {
             Layout.margins: Kirigami.Units.smallSpacing
             Layout.fillWidth: true
-            visible: currentProvider === "opencode" && !ProcessManager.running
+            visible: currentProvider === ProviderConstants.PROVIDERS.OPENCODE && !ProcessManager.running
             type: Kirigami.MessageType.Warning
             text: ProcessManager.lastError || i18n("OpenCode server is not running. Start it in Settings.")
         }
@@ -1375,7 +847,7 @@ Kirigami.Page {
         Kirigami.InlineMessage {
             Layout.margins: Kirigami.Units.smallSpacing
             Layout.fillWidth: true
-            visible: currentProvider === "pi" && !PiProcessManager.running
+            visible: currentProvider === ProviderConstants.PROVIDERS.PI && !PiProcessManager.running
             type: Kirigami.MessageType.Warning
             text: PiProcessManager.lastError || i18n("Pi is not running. Start it in Settings.")
         }
@@ -1430,7 +902,7 @@ Kirigami.Page {
             Layout.rightMargin: Kirigami.Units.largeSpacing
             Layout.topMargin: Kirigami.Units.smallSpacing
 
-            visible: currentProvider === "ollama" && hasLocalModel
+            visible: currentProvider === ProviderConstants.PROVIDERS.OLLAMA && hasLocalModel
 
             Controls.ComboBox {
                 id: modelComboBox
@@ -1501,7 +973,7 @@ Kirigami.Page {
             Layout.bottomMargin: Kirigami.Units.largeSpacing
 
             text: i18n("Refresh models list")
-            visible: currentProvider === "ollama" && !hasLocalModel
+            visible: currentProvider === ProviderConstants.PROVIDERS.OLLAMA && !hasLocalModel
 
             onClicked: getModels()
         }

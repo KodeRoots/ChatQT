@@ -46,7 +46,12 @@ ecm_target_qml_sources(chatqt
     qml/logic/OpenCodeClient.js
     qml/logic/PiClient.js
     qml/logic/McpClient.js
-    qml/logic/SkillManager.js
+    qml/logic/UuidGenerator.js
+    qml/logic/ProviderConstants.js
+    qml/logic/ProviderRegistry.js
+    qml/logic/McpOrchestrator.js
+    qml/logic/StreamingHandler.js
+    qml/logic/HttpErrorMapper.js
 )
 
 target_link_libraries(chatqt PRIVATE

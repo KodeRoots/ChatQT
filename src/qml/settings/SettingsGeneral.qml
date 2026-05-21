@@ -55,10 +55,10 @@ Kirigami.ScrollablePage {
             visible: root.settings && root.settings.experimentalFeatures
             Kirigami.FormData.label: i18nc("@label:checkbox", "OpenClaw:")
             text: i18nc("@option:check", "Enable OpenClaw provider")
-            checked: root.settings ? root.settings._openclawEnabledStored : false
+            checked: root.settings ? root.settings.openclawEnabledRaw : false
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings._openclawEnabledStored = checked;
+                    root.settings.openclawEnabledRaw = checked;
                 }
             }
         }
@@ -68,10 +68,10 @@ Kirigami.ScrollablePage {
             visible: root.settings && root.settings.experimentalFeatures
             Kirigami.FormData.label: i18nc("@label:checkbox", "OpenCode:")
             text: i18nc("@option:check", "Enable OpenCode provider")
-            checked: root.settings ? root.settings._opencodeEnabledStored : false
+            checked: root.settings ? root.settings.opencodeEnabledRaw : false
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings._opencodeEnabledStored = checked;
+                    root.settings.opencodeEnabledRaw = checked;
                 }
             }
         }
@@ -81,10 +81,10 @@ Kirigami.ScrollablePage {
             visible: root.settings && root.settings.experimentalFeatures
             Kirigami.FormData.label: i18nc("@label:checkbox", "Pi:")
             text: i18nc("@option:check", "Enable Pi provider")
-            checked: root.settings ? root.settings._piEnabledStored : false
+            checked: root.settings ? root.settings.piEnabledRaw : false
             onCheckedChanged: {
                 if (root.settings) {
-                    root.settings._piEnabledStored = checked;
+                    root.settings.piEnabledRaw = checked;
                 }
             }
         }

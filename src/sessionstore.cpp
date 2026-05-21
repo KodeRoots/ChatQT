@@ -12,7 +12,6 @@
 #include <QDir>
 #include <QUuid>
 #include <QDateTime>
-#include <QMutexLocker>
 #include <KLocalizedString>
 
 SessionStore *SessionStore::s_instance = nullptr;
@@ -130,7 +129,7 @@ QString SessionStore::generateId() const
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
-bool SessionStore::executeQuery(QSqlQuery &query) const
+bool SessionStore::executeQuery(QSqlQuery &query)
 {
     if (!query.exec()) {
         logError(query.executedQuery().isEmpty() ? QStringLiteral("executeQuery") : query.executedQuery(), query.lastError());
@@ -139,10 +138,10 @@ bool SessionStore::executeQuery(QSqlQuery &query) const
     return true;
 }
 
-void SessionStore::logError(const QString &operation, const QSqlError &error) const
+void SessionStore::logError(const QString &operation, const QSqlError &error)
 {
     qWarning() << "SessionStore::" << operation << "error:" << error.text();
-    const_cast<SessionStore*>(this)->Q_EMIT errorOccurred(error.text());
+    Q_EMIT errorOccurred(error.text());
 }
 
 QString SessionStore::createSession(const QString &provider, const QString &model)
@@ -193,7 +192,7 @@ QVariantMap SessionStore::getSession(const QString &sessionId) const
     return result;
 }
 
-QVariantList SessionStore::listSessions() const
+QVariantList SessionStore::listSessions()
 {
     QSqlQuery query(m_db);
     query.prepare(QStringLiteral(
@@ -387,7 +386,7 @@ bool SessionStore::finalizeLastAssistantMessage(const QString &sessionId, const 
     return true;
 }
 
-QVariantList SessionStore::loadSession(const QString &sessionId) const
+QVariantList SessionStore::loadSession(const QString &sessionId)
 {
     QSqlQuery query(m_db);
     query.prepare(QStringLiteral(

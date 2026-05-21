@@ -18,39 +18,21 @@ function abortActiveRequest() {
     return false;
 }
 
-// Session cache: stores session ID for the current conversation
 var currentSessionId = null;
 
-/**
- * Reset session state (call when starting a new chat)
- */
 function resetSession() {
     currentSessionId = null;
 }
 
-/**
- * Build HTTP Basic Auth header value
- * @param {string} username - OpenCode username
- * @param {string} password - OpenCode password
- * @returns {string} Base64-encoded Basic Auth header
- */
 function buildBasicAuth(username, password) {
-    var credentials = username + ":" + password;
+    const credentials = username + ":" + password;
     return "Basic " + Qt.btoa(credentials);
 }
 
-/**
- * Create a new session
- * @param {string} baseUrl - OpenCode server URL
- * @param {string} username - Authentication username
- * @param {string} password - Authentication password
- * @param {function} onSuccess - Callback(sessionId) on success
- * @param {function} onError - Callback(status, message) on error
- */
 function createSession(baseUrl, username, password, onSuccess, onError) {
-    var url = baseUrl.replace(/\/$/, '') + "/session";
+    const url = baseUrl.replace(/\/$/, '') + "/session";
     
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.setRequestHeader("Authorization", buildBasicAuth(username, password));
@@ -59,8 +41,8 @@ function createSession(baseUrl, username, password, onSuccess, onError) {
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (xhr.status === 200 || xhr.status === 201) {
                 try {
-                    var response = JSON.parse(xhr.responseText);
-                    var sessionId = response.id;
+                    const response = JSON.parse(xhr.responseText);
+                    const sessionId = response.id;
                     if (sessionId) {
                         currentSessionId = sessionId;
                         if (typeof onSuccess === "function") {
@@ -95,17 +77,12 @@ function createSession(baseUrl, username, password, onSuccess, onError) {
     return xhr;
 }
 
-/**
- * Extract text content from OpenCode response parts
- * @param {Array} parts - Array of part objects
- * @returns {string} Combined text from all text parts
- */
 function extractTextFromParts(parts) {
-    var text = "";
+    let text = "";
     if (!parts || !Array.isArray(parts)) return text;
     
-    for (var i = 0; i < parts.length; i++) {
-        var part = parts[i];
+    for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
         if (part.type === "text" && part.text) {
             text += part.text;
         }
@@ -113,23 +90,11 @@ function extractTextFromParts(parts) {
     return text;
 }
 
-/**
- * Send a chat request to OpenCode
- * @param {string} baseUrl - OpenCode server URL
- * @param {string} username - Authentication username
- * @param {string} password - Authentication password
- * @param {string} model - Model identifier (not currently used by OpenCode)
- * @param {Array} promptArray - Conversation history (we only use the last message)
- * @param {Object} listModel - QML ListModel for messages
- * @param {function} onStreaming - Callback for streaming updates
- * @param {function} onComplete - Callback when request completes
- */
 function requestOpenCode(baseUrl, username, password, model, promptArray, listModel, onStreaming, onComplete) {
-    var oldLength = listModel.count;
+    const oldLength = listModel.count;
     
-    // Get the last user message
-    var lastMessage = "";
-    for (var i = promptArray.length - 1; i >= 0; i--) {
+    let lastMessage = "";
+    for (let i = promptArray.length - 1; i >= 0; i--) {
         if (promptArray[i].role === "user") {
             lastMessage = promptArray[i].content;
             break;
@@ -143,31 +108,30 @@ function requestOpenCode(baseUrl, username, password, model, promptArray, listMo
         return;
     }
     
-    // Function to send message to session
-    var sendMessage = function(sessionId) {
-        var url = baseUrl.replace(/\/$/, '') + "/session/" + sessionId + "/message";
+    const sendMessage = function(sessionId) {
+        const url = baseUrl.replace(/\/$/, '') + "/session/" + sessionId + "/message";
         
-        var requestData = {
+        const requestData = {
             parts: [{
                 type: "text",
                 text: lastMessage
             }]
         };
         
-        var xhr = new XMLHttpRequest();
+        const xhr = new XMLHttpRequest();
         _activeXhr = xhr;
         xhr.open("POST", url, true);
         xhr.setRequestHeader("Content-Type", "application/json");
         xhr.setRequestHeader("Authorization", buildBasicAuth(username, password));
         
-        var text = "";
+        let text = "";
         
         xhr.onreadystatechange = function() {
             if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
                 try {
-                    var response = JSON.parse(xhr.responseText);
+                    const response = JSON.parse(xhr.responseText);
                     if (response.parts) {
-                        var newText = extractTextFromParts(response.parts);
+                        const newText = extractTextFromParts(response.parts);
                         if (newText !== text) {
                             text = newText;
                             if (typeof onStreaming === "function") {
@@ -198,9 +162,8 @@ function requestOpenCode(baseUrl, username, password, model, promptArray, listMo
         return xhr;
     };
     
-    // Create session if needed, then send message
     if (!currentSessionId) {
-        var sessionXhr = createSession(baseUrl, username, password, sendMessage, function(status, message) {
+        const sessionXhr = createSession(baseUrl, username, password, sendMessage, function(status, message) {
             console.error("OpenCode: Failed to create session:", status, message);
             if (typeof onComplete === "function") {
                 onComplete(oldLength, listModel);

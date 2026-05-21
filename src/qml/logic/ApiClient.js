@@ -7,6 +7,13 @@
 
 var _activeXhr = null;
 
+function _mapErrorStatus(status, statusText) {
+    if (status === 0) return "NETWORK_ERROR";
+    if (status === 401) return "UNAUTHORIZED";
+    if (status === 404) return "NOT_FOUND";
+    return statusText || "UNKNOWN";
+}
+
 function abortActiveRequest() {
     if (_activeXhr) {
         _activeXhr.onreadystatechange = function() {};
@@ -18,12 +25,23 @@ function abortActiveRequest() {
     return false;
 }
 
-function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete, thinkingEnabled, mcpFunctions) {
-    const oldLength = listModel.count;
-    const url = 'http://127.0.0.1:11434/api/chat';
+function buildToolsPayload(mcpFunctions) {
+    if (!mcpFunctions || mcpFunctions.length === 0) return undefined;
+    return mcpFunctions.map(function(f) {
+        return {
+            type: "function",
+            function: {
+                name: f.name,
+                description: f.description,
+                parameters: f.parameters
+            }
+        };
+    });
+}
 
-    let requestData = {
-        "model": modelsComboboxCurrentValue,
+function buildOllamaRequestData(model, promptArray, thinkingEnabled, mcpFunctions) {
+    const requestData = {
+        "model": model,
         "keep_alive": "5m",
         "stream": true,
         "options": {},
@@ -34,146 +52,219 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
         requestData["think"] = true;
     }
 
-    if (mcpFunctions && mcpFunctions.length > 0) {
-        requestData["tools"] = mcpFunctions.map(function(f) {
-            return {
-                type: "function",
-                function: {
-                    name: f.name,
-                    description: f.description,
-                    parameters: f.parameters
-                }
-            };
-        });
+    const tools = buildToolsPayload(mcpFunctions);
+    if (tools) {
+        requestData["tools"] = tools;
     }
 
+    return requestData;
+}
+
+function parseOllamaChunk(parsedObject, state) {
+    if (parsedObject.error) {
+        state.errorDetected = true;
+        state.accumulatedText = parsedObject.error;
+        state.hasUpdate = true;
+        return;
+    }
+
+    const content = parsedObject?.message?.content;
+    const thinking = parsedObject?.message?.thinking;
+    const msgToolCalls = parsedObject?.message?.tool_calls;
+    const doneReason = parsedObject?.done_reason;
+
+    if (content) {
+        state.accumulatedText += content;
+        state.hasUpdate = true;
+    }
+    if (thinking) {
+        state.accumulatedThinking += thinking;
+        state.hasUpdate = true;
+    }
+    if (msgToolCalls && msgToolCalls.length > 0) {
+        state.hasToolCalls = true;
+        for (let tc = 0; tc < msgToolCalls.length; tc++) {
+            const tcItem = msgToolCalls[tc];
+            const tcIndex = tc;
+            if (!state.toolCalls[tcIndex]) {
+                state.toolCalls[tcIndex] = {
+                    id: tcItem.id || ("ollama_tc_" + tcIndex),
+                    type: "function",
+                    function: { name: "", arguments: "" }
+                };
+            }
+            if (tcItem.id) {
+                state.toolCalls[tcIndex].id = tcItem.id;
+            }
+            if (tcItem.function) {
+                if (tcItem.function.name) {
+                    state.toolCalls[tcIndex].function.name = tcItem.function.name;
+                }
+                if (tcItem.function.arguments) {
+                    if (typeof tcItem.function.arguments === 'string') {
+                        state.toolCalls[tcIndex].function.arguments += tcItem.function.arguments;
+                    } else {
+                        state.toolCalls[tcIndex].function.arguments = tcItem.function.arguments;
+                    }
+                }
+            }
+        }
+    }
+    if (doneReason === 'tool_calls') {
+        state.hasToolCalls = true;
+    }
+}
+
+function buildOllamaFinalResult(state, xhrStatus, xhrResponseText) {
+    if (xhrStatus !== 200 && !state.errorDetected && state.accumulatedText === '') {
+        state.accumulatedText = 'Ollama error: HTTP ' + xhrStatus;
+        if (xhrResponseText) {
+            try {
+                const errObj = JSON.parse(xhrResponseText);
+                if (errObj.error) {
+                    state.accumulatedText = errObj.error;
+                }
+            } catch (e) { console.warn("Failed to parse Ollama error response:", e) }
+        }
+    }
+
+    const finalToolCalls = [];
+    if (state.hasToolCalls && !state.errorDetected) {
+        const tcKeys = Object.keys(state.toolCalls);
+        for (let k = 0; k < tcKeys.length; k++) {
+            finalToolCalls.push(state.toolCalls[tcKeys[k]]);
+        }
+    }
+
+    return { text: state.accumulatedText, toolCalls: finalToolCalls };
+}
+
+function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStreaming, onComplete, thinkingEnabled, mcpFunctions) {
+    const oldLength = listModel.count;
+    const url = 'http://127.0.0.1:11434/api/chat';
+    const requestData = buildOllamaRequestData(modelsComboboxCurrentValue, promptArray, thinkingEnabled, mcpFunctions);
     const data = JSON.stringify(requestData);
 
-    let xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     _activeXhr = xhr;
 
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-Type', 'application/json');
 
     let processedLength = 0;
-    let accumulatedText = '';
-    let accumulatedThinking = '';
-    let toolCalls = {};
-    let hasToolCalls = false;
-
-    let errorDetected = false;
+    const state = {
+        accumulatedText: '',
+        accumulatedThinking: '',
+        toolCalls: {},
+        hasToolCalls: false,
+        hasUpdate: false,
+        errorDetected: false
+    };
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
             const response = xhr.responseText;
-
             if (response.length > processedLength) {
                 const newChunk = response.substring(processedLength);
                 processedLength = response.length;
-
                 const lines = newChunk.split('\n');
-                let hasUpdate = false;
+                state.hasUpdate = false;
 
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
-
                     try {
                         const parsedObject = JSON.parse(line);
-
-                        if (parsedObject.error) {
-                            errorDetected = true;
-                            accumulatedText = parsedObject.error;
-                            hasUpdate = true;
-                            continue;
-                        }
-
-                        const content = parsedObject?.message?.content;
-                        const thinking = parsedObject?.message?.thinking;
-                        const msgToolCalls = parsedObject?.message?.tool_calls;
-                        const doneReason = parsedObject?.done_reason;
-
-                        if (content) {
-                            accumulatedText += content;
-                            hasUpdate = true;
-                        }
-                        if (thinking) {
-                            accumulatedThinking += thinking;
-                            hasUpdate = true;
-                        }
-                        if (msgToolCalls && msgToolCalls.length > 0) {
-                            hasToolCalls = true;
-                            for (let tc = 0; tc < msgToolCalls.length; tc++) {
-                                const tcItem = msgToolCalls[tc];
-                                const tcIndex = tc;
-                                if (!toolCalls[tcIndex]) {
-                                    toolCalls[tcIndex] = {
-                                        id: tcItem.id || ("ollama_tc_" + tcIndex),
-                                        type: "function",
-                                        function: {
-                                            name: "",
-                                            arguments: ""
-                                        }
-                                    };
-                                }
-                                if (tcItem.id) {
-                                    toolCalls[tcIndex].id = tcItem.id;
-                                }
-                                if (tcItem.function) {
-                                    if (tcItem.function.name) {
-                                        toolCalls[tcIndex].function.name = tcItem.function.name;
-                                    }
-                                    if (tcItem.function.arguments) {
-                                        if (typeof tcItem.function.arguments === 'string') {
-                                            toolCalls[tcIndex].function.arguments += tcItem.function.arguments;
-                                        } else {
-                                            toolCalls[tcIndex].function.arguments = tcItem.function.arguments;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (doneReason === 'tool_calls') {
-                            hasToolCalls = true;
-                        }
+                        parseOllamaChunk(parsedObject, state);
                     } catch (e) {
-                        // Skip invalid JSON
+                        console.warn("Skipping invalid JSON chunk in Ollama stream:", e)
                     }
                 }
 
-                if (hasUpdate && typeof onStreaming === 'function') {
-                    onStreaming(accumulatedText, oldLength, listModel, accumulatedThinking);
+                if (state.hasUpdate && typeof onStreaming === 'function') {
+                    onStreaming(state.accumulatedText, oldLength, listModel, state.accumulatedThinking);
                 }
             }
         }
 
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (typeof onComplete === 'function') {
-                if (xhr.status !== 200 && !errorDetected && accumulatedText === '') {
-                    accumulatedText = 'Ollama error: HTTP ' + xhr.status;
-                    if (xhr.responseText) {
-                        try {
-                            const errObj = JSON.parse(xhr.responseText);
-                            if (errObj.error) {
-                                accumulatedText = errObj.error;
-                            }
-                        } catch (e) {}
-                    }
-                }
-                let finalToolCalls = [];
-                if (hasToolCalls && !errorDetected) {
-                    let tcKeys = Object.keys(toolCalls);
-                    for (let k = 0; k < tcKeys.length; k++) {
-                        finalToolCalls.push(toolCalls[tcKeys[k]]);
-                    }
-                }
-                onComplete(oldLength, listModel, accumulatedText, finalToolCalls);
+                const result = buildOllamaFinalResult(state, xhr.status, xhr.responseText);
+                onComplete(oldLength, listModel, result.text, result.toolCalls);
             }
         }
     };
 
     xhr.send(data);
     return xhr;
+}
+
+function parseOpenAIChunk(parsed, state) {
+    const choices = parsed.choices;
+    if (!choices || choices.length === 0) return;
+
+    const delta = choices[0].delta;
+    const finishReason = choices[0].finish_reason;
+
+    if (delta) {
+        if (delta.reasoning_content) {
+            state.text += delta.reasoning_content;
+            state.hasUpdate = true;
+        }
+        if (delta.reasoning) {
+            state.text += delta.reasoning;
+            state.hasUpdate = true;
+        }
+        if (delta.content) {
+            state.text += delta.content;
+            state.hasUpdate = true;
+        }
+
+        if (delta.tool_calls) {
+            state.hasToolCalls = true;
+            for (let tc = 0; tc < delta.tool_calls.length; tc++) {
+                const toolCall = delta.tool_calls[tc];
+                const tcIndex = toolCall.index !== undefined ? toolCall.index : tc;
+                if (!state.toolCalls[tcIndex]) {
+                    state.toolCalls[tcIndex] = {
+                        id: toolCall.id || "",
+                        type: "function",
+                        function: { name: "", arguments: "" }
+                    };
+                }
+                if (toolCall.id) {
+                    state.toolCalls[tcIndex].id = toolCall.id;
+                }
+                if (toolCall.function) {
+                    if (toolCall.function.name) {
+                        state.toolCalls[tcIndex].function.name += toolCall.function.name;
+                    }
+                    if (toolCall.function.arguments) {
+                        state.toolCalls[tcIndex].function.arguments += toolCall.function.arguments;
+                    }
+                }
+            }
+        }
+
+        if (state.hasUpdate && typeof state.onStreaming === 'function') {
+            state.onStreaming(state.text, state.oldLength, state.listModel, state.thinkingText);
+        }
+    }
+
+    if (finishReason === 'tool_calls') {
+        state.hasToolCalls = true;
+    }
+}
+
+function buildOpenAIFinalResult(state) {
+    const finalToolCalls = [];
+    if (state.hasToolCalls) {
+        const tcKeys = Object.keys(state.toolCalls);
+        for (let k = 0; k < tcKeys.length; k++) {
+            finalToolCalls.push(state.toolCalls[tcKeys[k]]);
+        }
+    }
+    return { text: state.text, toolCalls: finalToolCalls };
 }
 
 function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEnabled, extraHeaders, includeV1, listModel, onStreaming, onComplete, mcpFunctions) {
@@ -184,7 +275,7 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
     }
     url += '/chat/completions';
 
-    let requestData = {
+    const requestData = {
         "model": model,
         "messages": promptArray,
         "stream": true
@@ -194,22 +285,14 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
         requestData["chat_template_kwargs"] = {"enable_thinking": false};
     }
 
-    if (mcpFunctions && mcpFunctions.length > 0) {
-        requestData["tools"] = mcpFunctions.map(function(f) {
-            return {
-                type: "function",
-                function: {
-                    name: f.name,
-                    description: f.description,
-                    parameters: f.parameters
-                }
-            };
-        });
+    const tools = buildToolsPayload(mcpFunctions);
+    if (tools) {
+        requestData["tools"] = tools;
     }
 
     const data = JSON.stringify(requestData);
 
-    let xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     _activeXhr = xhr;
 
     xhr.open('POST', url, true);
@@ -222,97 +305,39 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
         }
     }
 
-    let text = '';
-    let thinkingText = '';
     let processedLength = 0;
-    let toolCalls = {};
-    let hasToolCalls = false;
+    const state = {
+        text: '',
+        thinkingText: '',
+        toolCalls: {},
+        hasToolCalls: false,
+        hasUpdate: false,
+        onStreaming: onStreaming,
+        oldLength: oldLength,
+        listModel: listModel
+    };
 
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
             const response = xhr.responseText;
-
             if (response.length > processedLength) {
                 const newChunk = response.substring(processedLength);
                 processedLength = response.length;
-
                 const lines = newChunk.split('\n');
 
                 for (let i = 0; i < lines.length; i++) {
                     const line = lines[i].trim();
+                    if (!line.startsWith('data: ')) continue;
 
-                    if (line.startsWith('data: ')) {
-                        const dataStr = line.substring(6);
+                    const dataStr = line.substring(6);
+                    if (dataStr === '[DONE]') continue;
 
-                        if (dataStr === '[DONE]') {
-                            continue;
-                        }
-
-                        try {
-                            const parsed = JSON.parse(dataStr);
-                            const choices = parsed.choices;
-                            if (choices && choices.length > 0) {
-                                const delta = choices[0].delta;
-                                const finishReason = choices[0].finish_reason;
-                                if (delta) {
-                                    let hasUpdate = false;
-
-                                    if (delta.reasoning_content) {
-                                        thinkingText += delta.reasoning_content;
-                                        hasUpdate = true;
-                                    }
-
-                                    if (delta.reasoning) {
-                                        thinkingText += delta.reasoning;
-                                        hasUpdate = true;
-                                    }
-
-                                    if (delta.content) {
-                                        text += delta.content;
-                                        hasUpdate = true;
-                                    }
-
-                                    if (delta.tool_calls) {
-                                        hasToolCalls = true;
-                                        for (var tc = 0; tc < delta.tool_calls.length; tc++) {
-                                            var toolCall = delta.tool_calls[tc];
-                                            var tcIndex = toolCall.index !== undefined ? toolCall.index : tc;
-                                            if (!toolCalls[tcIndex]) {
-                                                toolCalls[tcIndex] = {
-                                                    id: toolCall.id || "",
-                                                    type: "function",
-                                                    function: {
-                                                        name: "",
-                                                        arguments: ""
-                                                    }
-                                                };
-                                            }
-                                            if (toolCall.id) {
-                                                toolCalls[tcIndex].id = toolCall.id;
-                                            }
-                                            if (toolCall.function) {
-                                                if (toolCall.function.name) {
-                                                    toolCalls[tcIndex].function.name += toolCall.function.name;
-                                                }
-                                                if (toolCall.function.arguments) {
-                                                    toolCalls[tcIndex].function.arguments += toolCall.function.arguments;
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if (hasUpdate && typeof onStreaming === 'function') {
-                                        onStreaming(text, oldLength, listModel, thinkingText);
-                                    }
-                                }
-
-                                if (finishReason === 'tool_calls') {
-                                    hasToolCalls = true;
-                                }
-                            }
-                        } catch (e) {
-                            // Skip invalid JSON
-                        }
+                    try {
+                        const parsed = JSON.parse(dataStr);
+                        state.hasUpdate = false;
+                        parseOpenAIChunk(parsed, state);
+                    } catch (e) {
+                        console.warn("Skipping invalid JSON chunk in OpenAI stream:", e)
                     }
                 }
             }
@@ -320,14 +345,8 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
 
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (typeof onComplete === 'function') {
-                var finalToolCalls = [];
-                if (hasToolCalls) {
-                    var tcKeys = Object.keys(toolCalls);
-                    for (var k = 0; k < tcKeys.length; k++) {
-                        finalToolCalls.push(toolCalls[tcKeys[k]]);
-                    }
-                }
-                onComplete(oldLength, listModel, text, finalToolCalls);
+                const result = buildOpenAIFinalResult(state);
+                onComplete(oldLength, listModel, result.text, result.toolCalls);
             }
         }
     };
@@ -338,8 +357,7 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
 
 function getOllamaModels(onSuccess, onError) {
     const url = 'http://127.0.0.1:11434/api/tags';
-
-    let xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
 
     xhr.open('GET', url);
     xhr.setRequestHeader('Content-Type', 'application/json');
@@ -371,11 +389,11 @@ function preprocessMarkdown(text) {
 }
 
 function testConnection(providerType, baseUrl, token, model, extraHeaders, includeV1, onSuccess, onError) {
-    var cleanUrl = baseUrl.replace(/\/$/, '');
+    const cleanUrl = baseUrl.replace(/\/$/, '');
 
     if (providerType === "ollama") {
-        var url = cleanUrl + "/api/tags";
-        var xhr = new XMLHttpRequest();
+        const url = cleanUrl + "/api/tags";
+        const xhr = new XMLHttpRequest();
         xhr.open("GET", url, true);
         xhr.setRequestHeader("Content-Type", "application/json");
 
@@ -383,8 +401,8 @@ function testConnection(providerType, baseUrl, token, model, extraHeaders, inclu
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
                     try {
-                        var response = JSON.parse(xhr.responseText);
-                        var modelCount = response.models ? response.models.length : 0;
+                        const response = JSON.parse(xhr.responseText);
+                        const modelCount = response.models ? response.models.length : 0;
                         if (typeof onSuccess === "function") {
                             onSuccess({ modelCount: modelCount });
                         }
@@ -395,10 +413,7 @@ function testConnection(providerType, baseUrl, token, model, extraHeaders, inclu
                     }
                 } else {
                     if (typeof onError === "function") {
-                        var statusText = xhr.statusText || "UNKNOWN";
-                        if (xhr.status === 0) statusText = "NETWORK_ERROR";
-                        else if (xhr.status === 401) statusText = "UNAUTHORIZED";
-                        else if (xhr.status === 404) statusText = "NOT_FOUND";
+                        const statusText = _mapErrorStatus(xhr.status, xhr.statusText);
                         onError({ status: xhr.status, statusText: statusText });
                     }
                 }
@@ -409,19 +424,19 @@ function testConnection(providerType, baseUrl, token, model, extraHeaders, inclu
         return xhr;
     }
 
-    var url = cleanUrl;
+    let url = cleanUrl;
     if (includeV1 && !cleanUrl.endsWith("/v1")) {
         url = cleanUrl + "/v1";
     }
     url += "/chat/completions";
 
-    var data = JSON.stringify({
+    const data = JSON.stringify({
         "model": model,
         "messages": [{"role": "user", "content": "hi"}],
         "max_tokens": 1
     });
 
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     xhr.setRequestHeader("Content-Type", "application/json");
     if (token) {
@@ -429,8 +444,8 @@ function testConnection(providerType, baseUrl, token, model, extraHeaders, inclu
     }
 
     if (extraHeaders) {
-        var keys = Object.keys(extraHeaders);
-        for (var i = 0; i < keys.length; i++) {
+        const keys = Object.keys(extraHeaders);
+        for (let i = 0; i < keys.length; i++) {
             xhr.setRequestHeader(keys[i], extraHeaders[i]);
         }
     }
@@ -443,10 +458,7 @@ function testConnection(providerType, baseUrl, token, model, extraHeaders, inclu
                 }
             } else {
                 if (typeof onError === "function") {
-                    var statusText = xhr.statusText || "UNKNOWN";
-                    if (xhr.status === 0) statusText = "NETWORK_ERROR";
-                    else if (xhr.status === 401) statusText = "UNAUTHORIZED";
-                    else if (xhr.status === 404) statusText = "NOT_FOUND";
+                    const statusText = _mapErrorStatus(xhr.status, xhr.statusText);
                     onError({ status: xhr.status, statusText: statusText });
                 }
             }

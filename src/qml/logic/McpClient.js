@@ -6,7 +6,7 @@
 .pragma library
 
 var _servers = {};
-var _requestId = 1;
+let _requestId = 1;
 
 function getNextRequestId() {
     return _requestId++;
@@ -34,11 +34,11 @@ function createJsonRpcNotification(method, params) {
 }
 
 function parseSseResponse(responseText) {
-    var lines = responseText.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
+    const lines = responseText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         if (line.startsWith('data: ')) {
-            var dataStr = line.substring(6).trim();
+            const dataStr = line.substring(6).trim();
             if (dataStr === '[DONE]') continue;
             try {
                 return JSON.parse(dataStr);
@@ -55,12 +55,12 @@ function parseSseResponse(responseText) {
 }
 
 function extractAllSseData(responseText) {
-    var results = [];
-    var lines = responseText.split('\n');
-    for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
+    const results = [];
+    const lines = responseText.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         if (line.startsWith('data: ')) {
-            var dataStr = line.substring(6).trim();
+            const dataStr = line.substring(6).trim();
             if (dataStr === '[DONE]') continue;
             try {
                 results.push(JSON.parse(dataStr));
@@ -72,7 +72,7 @@ function extractAllSseData(responseText) {
     if (results.length === 0) {
         try {
             results.push(JSON.parse(responseText));
-        } catch (e) {}
+        } catch (e) { console.warn("Failed to parse fallback response text:", e) }
     }
     return results;
 }
@@ -84,9 +84,9 @@ function setupCommonHeaders(xhr, headers, sessionId) {
         xhr.setRequestHeader("Mcp-Session-Id", sessionId);
     }
     if (headers) {
-        var keys = Object.keys(headers);
-        for (var i = 0; i < keys.length; i++) {
-            var lk = keys[i].toLowerCase();
+        const keys = Object.keys(headers);
+        for (let i = 0; i < keys.length; i++) {
+            const lk = keys[i].toLowerCase();
             if (lk !== "content-type" && lk !== "accept" && lk !== "mcp-session-id") {
                 xhr.setRequestHeader(keys[i], headers[i]);
             }
@@ -95,9 +95,9 @@ function setupCommonHeaders(xhr, headers, sessionId) {
 }
 
 function initializeServer(serverUrl, headers, onSuccess, onError) {
-    var url = serverUrl.replace(/\/$/, '');
+    const url = serverUrl.replace(/\/$/, '');
     
-    var initRequest = createJsonRpcRequest("initialize", {
+    const initRequest = createJsonRpcRequest("initialize", {
         protocolVersion: "2025-03-26",
         capabilities: {
             roots: { listChanged: true },
@@ -109,7 +109,7 @@ function initializeServer(serverUrl, headers, onSuccess, onError) {
         }
     });
 
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     setupCommonHeaders(xhr, headers);
     
@@ -117,7 +117,7 @@ function initializeServer(serverUrl, headers, onSuccess, onError) {
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (xhr.status === 200 || xhr.status === 201 || xhr.status === 202) {
                 try {
-                    var response = parseSseResponse(xhr.responseText);
+                    const response = parseSseResponse(xhr.responseText);
                     if (!response) {
                         if (typeof onError === "function") {
                             onError(-1, "Empty response from MCP server");
@@ -125,10 +125,10 @@ function initializeServer(serverUrl, headers, onSuccess, onError) {
                         return;
                     }
                     if (response.result) {
-                        var sessionId = xhr.getResponseHeader("Mcp-Session-Id") || "";
-                        var serverUrl_ = url;
+                        const sessionId = xhr.getResponseHeader("Mcp-Session-Id") || "";
+                        const serverUrl_ = url;
                         
-                        var notifyXhr = new XMLHttpRequest();
+                        const notifyXhr = new XMLHttpRequest();
                         notifyXhr.open("POST", serverUrl_, true);
                         setupCommonHeaders(notifyXhr, headers, sessionId);
                         notifyXhr.send(JSON.stringify(createJsonRpcNotification("notifications/initialized", {})));
@@ -156,7 +156,7 @@ function initializeServer(serverUrl, headers, onSuccess, onError) {
                 }
             } else {
                 if (typeof onError === "function") {
-                    var statusText = xhr.statusText || "UNKNOWN";
+                    let statusText = xhr.statusText || "UNKNOWN";
                     if (xhr.status === 0) statusText = "NETWORK_ERROR";
                     else if (xhr.status === 401) statusText = "UNAUTHORIZED";
                     else if (xhr.status === 404) statusText = "NOT_FOUND";
@@ -172,10 +172,10 @@ function initializeServer(serverUrl, headers, onSuccess, onError) {
 }
 
 function listTools(serverUrl, sessionId, headers, onSuccess, onError) {
-    var url = serverUrl.replace(/\/$/, '');
-    var request = createJsonRpcRequest("tools/list", {});
+    const url = serverUrl.replace(/\/$/, '');
+    const request = createJsonRpcRequest("tools/list", {});
     
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     setupCommonHeaders(xhr, headers, sessionId);
     
@@ -183,7 +183,7 @@ function listTools(serverUrl, sessionId, headers, onSuccess, onError) {
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (xhr.status === 200 || xhr.status === 201 || xhr.status === 202) {
                 try {
-                    var response = parseSseResponse(xhr.responseText);
+                    const response = parseSseResponse(xhr.responseText);
                     if (!response) {
                         if (typeof onSuccess === "function") {
                             onSuccess([]);
@@ -210,7 +210,7 @@ function listTools(serverUrl, sessionId, headers, onSuccess, onError) {
                 }
             } else {
                 if (typeof onError === "function") {
-                    var statusText = xhr.statusText || "UNKNOWN";
+                    let statusText = xhr.statusText || "UNKNOWN";
                     if (xhr.status === 0) statusText = "NETWORK_ERROR";
                     onError(xhr.status, statusText);
                 }
@@ -223,28 +223,28 @@ function listTools(serverUrl, sessionId, headers, onSuccess, onError) {
 }
 
 function callTool(serverUrl, sessionId, headers, toolName, arguments, onSuccess, onError) {
-    var url = serverUrl.replace(/\/$/, '');
-    var request = createJsonRpcRequest("tools/call", {
+    const url = serverUrl.replace(/\/$/, '');
+    const request = createJsonRpcRequest("tools/call", {
         name: toolName,
         arguments: arguments || {}
     });
     
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     setupCommonHeaders(xhr, headers, sessionId);
     
-    var accumulatedSseData = "";
-    var parsedResult = null;
+    let accumulatedSseData = "";
+    let parsedResult = null;
     
     xhr.onreadystatechange = function() {
         if (xhr.readyState === XMLHttpRequest.LOADING || xhr.readyState === XMLHttpRequest.DONE) {
-            var responseText = xhr.responseText;
+            const responseText = xhr.responseText;
             if (responseText.length > accumulatedSseData.length) {
-                var newChunk = responseText.substring(accumulatedSseData.length);
+                const newChunk = responseText.substring(accumulatedSseData.length);
                 accumulatedSseData = responseText;
                 
-                var sseResults = extractAllSseData(newChunk);
-                for (var i = 0; i < sseResults.length; i++) {
+                const sseResults = extractAllSseData(newChunk);
+                for (let i = 0; i < sseResults.length; i++) {
                     if (sseResults[i].result) {
                         parsedResult = sseResults[i].result;
                     }
@@ -255,12 +255,12 @@ function callTool(serverUrl, sessionId, headers, toolName, arguments, onSuccess,
         if (xhr.readyState === XMLHttpRequest.DONE) {
             if (xhr.status === 200 || xhr.status === 201 || xhr.status === 202) {
                 if (parsedResult) {
-                    var resultText = "";
-                    var isError = parsedResult.isError || false;
+                    let resultText = "";
+                    const isError = parsedResult.isError || false;
                     
                     if (parsedResult.content) {
-                        for (var i = 0; i < parsedResult.content.length; i++) {
-                            var item = parsedResult.content[i];
+                        for (let i = 0; i < parsedResult.content.length; i++) {
+                            const item = parsedResult.content[i];
                             if (item.type === "text") {
                                 resultText += item.text;
                             } else if (item.type === "image") {
@@ -281,14 +281,14 @@ function callTool(serverUrl, sessionId, headers, toolName, arguments, onSuccess,
                     }
                 } else {
                     try {
-                        var response = parseSseResponse(xhr.responseText);
+                        const response = parseSseResponse(xhr.responseText);
                         if (response && response.result) {
-                            var res = response.result;
-                            var txt = "";
-                            var err = res.isError || false;
+                            const res = response.result;
+                            let txt = "";
+                            const err = res.isError || false;
                             if (res.content) {
-                                for (var j = 0; j < res.content.length; j++) {
-                                    var c = res.content[j];
+                                for (let j = 0; j < res.content.length; j++) {
+                                    const c = res.content[j];
                                     if (c.type === "text") txt += c.text;
                                     else if (c.type === "image") txt += "[Image data]";
                                     else if (c.type === "audio") txt += "[Audio data]";
@@ -315,7 +315,7 @@ function callTool(serverUrl, sessionId, headers, toolName, arguments, onSuccess,
                 }
             } else {
                 if (typeof onError === "function") {
-                    var statusText = xhr.statusText || "UNKNOWN";
+                    let statusText = xhr.statusText || "UNKNOWN";
                     if (xhr.status === 0) statusText = "NETWORK_ERROR";
                     else if (xhr.status === 401) statusText = "UNAUTHORIZED";
                     else if (xhr.status === 404) statusText = "NOT_FOUND";
@@ -347,14 +347,14 @@ function getServerState(serverId) {
 }
 
 function mcpToolsToOpenAiFunctions(tools) {
-    var functions = [];
+    const functions = [];
     if (!tools || !Array.isArray(tools)) return functions;
     
-    for (var i = 0; i < tools.length; i++) {
-        var tool = tools[i];
+    for (let i = 0; i < tools.length; i++) {
+        const tool = tools[i];
         if (!tool.name) continue;
         
-        var func = {
+        const func = {
             name: "mcp__" + tool.name,
             description: tool.description || "",
             parameters: tool.inputSchema || {

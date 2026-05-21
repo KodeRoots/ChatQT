@@ -17,12 +17,12 @@ function abortActiveRequest() {
 }
 
 function requestPi(processManager, promptArray, listModel, onStreaming, onComplete) {
-    var oldLength = listModel.count;
+    const oldLength = listModel.count;
 
     _processManager = processManager;
 
-    var lastMessage = "";
-    for (var i = promptArray.length - 1; i >= 0; i--) {
+    let lastMessage = "";
+    for (let i = promptArray.length - 1; i >= 0; i--) {
         if (promptArray[i].role === "user") {
             lastMessage = promptArray[i].content;
             break;
@@ -45,19 +45,20 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
 
     _isRequesting = true;
 
-    var text = "";
-    var thinkingText = "";
-    var currentToolCalls = [];
+    let text = "";
+    let thinkingText = "";
+    let currentToolCalls = [];
 
     function handleEvent(jsonLine) {
+        let event;
         try {
-            var event = JSON.parse(jsonLine);
+            event = JSON.parse(jsonLine);
         } catch (e) {
             return;
         }
 
         if (event.type === "message_update") {
-            var delta = event.assistantMessageEvent;
+            const delta = event.assistantMessageEvent;
             if (!delta) return;
 
             if (delta.type === "text_delta") {
@@ -71,7 +72,7 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
                     onStreaming(text, oldLength, listModel, thinkingText);
                 }
             } else if (delta.type === "toolcall_start") {
-                var tc = {
+                const tc = {
                     id: "",
                     type: "function",
                     function: {
@@ -90,8 +91,8 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
                 }
             } else if (delta.type === "toolcall_end") {
                 if (delta.toolCall) {
-                    var found = false;
-                    for (var t = 0; t < currentToolCalls.length; t++) {
+                    let found = false;
+                    for (let t = 0; t < currentToolCalls.length; t++) {
                         if (currentToolCalls[t].id === delta.toolCall.id) {
                             currentToolCalls[t].function.name = delta.toolCall.name || currentToolCalls[t].function.name;
                             if (delta.toolCall.arguments) {
@@ -104,7 +105,7 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
                         }
                     }
                     if (!found) {
-                        var newTc = {
+                        const newTc = {
                             id: delta.toolCall.id || "",
                             type: "function",
                             function: {
@@ -122,7 +123,7 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
             }
         } else if (event.type === "agent_end") {
             cleanup();
-            var finalToolCalls = currentToolCalls.length > 0 ? currentToolCalls : undefined;
+            const finalToolCalls = currentToolCalls.length > 0 ? currentToolCalls : undefined;
             if (typeof onComplete === "function") {
                 onComplete(oldLength, listModel, text, finalToolCalls);
             }
@@ -136,8 +137,7 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
         }
     }
 
-    var eventHandler;
-    eventHandler = (jsonLine) => {
+    const eventHandler = (jsonLine) => {
         handleEvent(jsonLine);
     };
 
@@ -148,7 +148,7 @@ function requestPi(processManager, promptArray, listModel, onStreaming, onComple
         processManager.eventReceived.disconnect(eventHandler);
     }
 
-    var promptCommand = JSON.stringify({
+    const promptCommand = JSON.stringify({
         "type": "prompt",
         "message": lastMessage
     });
