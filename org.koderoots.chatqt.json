@@ -23,6 +23,9 @@
         "-DCMAKE_INSTALL_PREFIX=/app"
       ],
       "builddir": true,
+      "post-install": [
+        "install -Dm0644 ../LICENSE -t /app/share/licenses/org.koderoots.chatqt"
+      ],
       "sources": [
         {
           "type": "dir",

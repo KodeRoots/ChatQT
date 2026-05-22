@@ -12,7 +12,7 @@
   <launchable type="desktop-id">org.koderoots.chatqt.desktop</launchable>
 
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>LGPL-2.1-or-later</project_license>
+  <project_license>GPL-3.0-or-later</project_license>
 
   <categories>
     <category>Network</category>
@@ -46,12 +46,24 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://i.imgur.com/placeholder.png</image>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/MainWindow.png</image>
       <caption>ChatQT main window</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/SettingsAgent.png</image>
+      <caption>Agent settings</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/SettingsOpenAICompatible.png</image>
+      <caption>OpenAI Compatible settings</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/SettingsSkillsMCPs.png</image>
+      <caption>Skills and MCP servers settings</caption>
     </screenshot>
   </screenshots>
 
-  <url type="homepage">https://github.com/DenysMb/ChatQT</url>
+  <url type="homepage">https://github.com/KodeRoots/ChatQT</url>
 
   <content_rating type="oars-1.1" />
 
