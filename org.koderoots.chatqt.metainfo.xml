@@ -64,14 +64,31 @@
   </screenshots>
 
   <url type="homepage">https://github.com/KodeRoots/ChatQT</url>
+  <url type="vcs-browser">https://github.com/KodeRoots/ChatQT</url>
+  <url type="bugtracker">https://github.com/KodeRoots/ChatQT/issues</url>
 
   <content_rating type="oars-1.1" />
 
   <releases>
-    <release version="1.0.0" date="2026-04-03">
+    <release version="1.0.0" date="2026-05-23">
       <description>
-        <p>Initial release.</p>
+        <p>This is the first stable release of ChatQT, a native AI chat client for KDE Plasma built with Qt6, QML, and Kirigami.</p>
+        <ul>
+          <li>Connect to Ollama with automatic model discovery</li>
+          <li>Connect to any OpenAI-compatible API (OpenAI, DeepSeek, Groq, etc.) with multi-provider support and connection testing</li>
+          <li>Streaming responses with real-time token-by-token display</li>
+          <li>Toggle extended thinking/reasoning for supported models</li>
+          <li>Persistent chat sessions with sidebar navigation and auto-restore on launch</li>
+          <li>MCP (Model Context Protocol) support: Streamable HTTP remote servers and stdio-based local servers</li>
+          <li>Pre-configured built-in MCP servers (Bash and Filesystem) with configurable tool call depth</li>
+          <li>Skill discovery: scan folders for SKILL.md files and inject them as system prompts</li>
+          <li>Load AGENTS.md or CLAUDE.md files for persistent AI agent instructions</li>
+          <li>System tray integration for minimizing and quick access</li>
+          <li>Flatpak support with proper sandboxing</li>
+          <li>Experimental providers (disabled by default): OpenClaw, OpenCode, and Pi agent</li>
+        </ul>
       </description>
+      <url type="details">https://github.com/KodeRoots/ChatQT/releases/tag/v1.0.0</url>
     </release>
   </releases>
 </component>
