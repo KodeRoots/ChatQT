@@ -70,11 +70,15 @@ Kirigami.AbstractCard {
             }
 
             Item {
+                id: thinkingContainer
                 Layout.fillWidth: true
-                implicitHeight: root.thinkingExpanded ? thinkingContentText.implicitHeight : 0
                 clip: true
 
-                Behavior on implicitHeight {
+                property real contentHeight: thinkingContentText.implicitHeight
+                height: root.thinkingExpanded ? contentHeight : 0
+                implicitHeight: height
+
+                Behavior on height {
                     NumberAnimation {
                         duration: Kirigami.Units.longDuration
                         easing.type: Easing.InOutQuad

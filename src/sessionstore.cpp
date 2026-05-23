@@ -309,14 +309,16 @@ bool SessionStore::addMessage(const QString &sessionId, const QString &role, con
 
 bool SessionStore::updateLastAssistantMessage(const QString &sessionId, const QString &content, const QString &thinkingContent)
 {
+    QString safeContent = content.isNull() ? QStringLiteral("") : content;
+    QString safeThinking = thinkingContent.isNull() ? QStringLiteral("") : thinkingContent;
+
     QSqlQuery query(m_db);
     query.prepare(QStringLiteral(
         "UPDATE messages SET content = ?, thinking_content = ? "
-        "WHERE session_id = ? AND role = 'assistant' "
-        "ORDER BY created_at DESC LIMIT 1"
+        "WHERE id IN (SELECT id FROM messages WHERE session_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1)"
     ));
-    query.addBindValue(content);
-    query.addBindValue(thinkingContent);
+    query.addBindValue(safeContent);
+    query.addBindValue(safeThinking);
     query.addBindValue(sessionId);
 
     if (!executeQuery(query)) {
@@ -330,8 +332,7 @@ bool SessionStore::markLastAssistantAsError(const QString &sessionId)
     QSqlQuery query(m_db);
     query.prepare(QStringLiteral(
         "UPDATE messages SET role = 'error' "
-        "WHERE session_id = ? AND role = 'assistant' "
-        "ORDER BY created_at DESC LIMIT 1"
+        "WHERE id IN (SELECT id FROM messages WHERE session_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1)"
     ));
     query.addBindValue(sessionId);
 
@@ -350,6 +351,9 @@ bool SessionStore::finalizeLastAssistantMessage(const QString &sessionId, const 
     findQuery.addBindValue(sessionId);
 
     if (!findQuery.exec() || !findQuery.next()) {
+        QString safeContent = content.isNull() ? QStringLiteral("") : content;
+        QString safeThinking = thinkingContent.isNull() ? QStringLiteral("") : thinkingContent;
+
         QSqlQuery query(m_db);
         query.prepare(QStringLiteral(
             "INSERT INTO messages (session_id, role, content, thinking_content, created_at) "
@@ -357,19 +361,22 @@ bool SessionStore::finalizeLastAssistantMessage(const QString &sessionId, const 
         ));
         const qint64 now = QDateTime::currentMSecsSinceEpoch();
         query.addBindValue(sessionId);
-        query.addBindValue(content);
-        query.addBindValue(thinkingContent);
+        query.addBindValue(safeContent);
+        query.addBindValue(safeThinking);
         query.addBindValue(now);
         if (!executeQuery(query)) {
             return false;
         }
     } else {
+        QString safeContent = content.isNull() ? QStringLiteral("") : content;
+        QString safeThinking = thinkingContent.isNull() ? QStringLiteral("") : thinkingContent;
+
         QSqlQuery query(m_db);
         query.prepare(QStringLiteral(
             "UPDATE messages SET content = ?, thinking_content = ? WHERE id = ?"
         ));
-        query.addBindValue(content);
-        query.addBindValue(thinkingContent);
+        query.addBindValue(safeContent);
+        query.addBindValue(safeThinking);
         query.addBindValue(findQuery.value(0));
         if (!executeQuery(query)) {
             return false;
