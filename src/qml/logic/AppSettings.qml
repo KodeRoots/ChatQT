@@ -32,7 +32,7 @@ QtObject {
     property bool mcpDefaultsInitialized: _settings.value("mcpDefaultsInitialized", false)
 
     // Skills settings
-    property string skillFolders: _settings.value("skillFolders", JSON.stringify(["~/.skills", "~/.agents/skills"]))
+    property string skillFolders: _settings.value("skillFolders", "[]")
     property string agentFilePath: _settings.value("agentFilePath", "")
 
     // Provider enable/disable settings
@@ -169,7 +169,7 @@ QtObject {
         try {
             return JSON.parse(skillFolders)
         } catch (e) {
-            return ["~/.skills", "~/.agents/skills"]
+            return []
         }
     }
 

@@ -10,9 +10,7 @@
     "--socket=wayland",
     "--device=dri",
     "--share=network",
-    "--talk-name=org.freedesktop.Flatpak",
-    "--filesystem=~/.skills:ro",
-    "--filesystem=~/.agents:ro"
+    "--talk-name=org.freedesktop.Flatpak"
   ],
   "modules": [
     {
