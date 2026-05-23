@@ -10,7 +10,8 @@
     "--socket=wayland",
     "--device=dri",
     "--share=network",
-    "--talk-name=org.freedesktop.Flatpak"
+    "--talk-name=org.freedesktop.Flatpak",
+    "--talk-name=org.kde.StatusNotifierWatcher"
   ],
   "modules": [
     {
