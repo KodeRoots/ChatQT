@@ -70,6 +70,17 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.0.1" date="2026-05-23">
+      <description>
+        <p>Bug fix release addressing thinking display and Flatpak tray icon issues.</p>
+        <ul>
+          <li>Fix thinking/reasoning content not displaying in the collapsible block for OpenAI-compatible providers</li>
+          <li>Fix system tray icon not appearing in the Flatpak build</li>
+          <li>Removed default skill folder paths (users now add folders manually)</li>
+        </ul>
+      </description>
+      <url type="details">https://github.com/KodeRoots/ChatQT/releases/tag/v1.0.1</url>
+    </release>
     <release version="1.0.0" date="2026-05-23">
       <description>
         <p>This is the first stable release of ChatQT, a native AI chat client for KDE Plasma built with Qt6, QML, and Kirigami.</p>

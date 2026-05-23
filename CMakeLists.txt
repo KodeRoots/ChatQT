@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(chatqt VERSION 1.0.0 LANGUAGES CXX)
+project(chatqt VERSION 1.0.1 LANGUAGES CXX)
 
 set(KF_MIN_VERSION "6.0.0")
 set(QT_MIN_VERSION "6.5.0")
