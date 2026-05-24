@@ -17,14 +17,8 @@
     {
       "name": "chatqt",
       "buildsystem": "cmake-ninja",
-      "config-opts": [
-        "-DCMAKE_BUILD_TYPE=Release",
-        "-DCMAKE_INSTALL_PREFIX=/app"
-      ],
+      "config-opts": ["-DCMAKE_BUILD_TYPE=Release"],
       "builddir": true,
-      "post-install": [
-        "install -Dm0644 ../LICENSE -t /app/share/licenses/org.koderoots.chatqt"
-      ],
       "sources": [
         {
           "type": "dir",
