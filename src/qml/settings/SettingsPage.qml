@@ -86,7 +86,6 @@ Kirigami.ScrollablePage {
         FormCard.FormDelegateSeparator {
             above: generalButton
             below: openclawButton
-            visible: root.openclawVisible
         }
 
         FormCard.FormButtonDelegate {
