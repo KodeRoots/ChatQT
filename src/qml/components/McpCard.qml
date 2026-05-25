@@ -18,8 +18,6 @@ Kirigami.AbstractCard {
     property bool serverEnabled
     property string serverStatus: "disconnected"
     property int serverToolCount: 0
-    property string serverCommand
-    property bool serverIsBuiltIn: false
 
     signal editClicked
     signal removeClicked
@@ -45,23 +43,6 @@ Kirigami.AbstractCard {
                 text: root.serverDisplayName != "" ? root.serverDisplayName : i18nc("@info", "Unnamed MCP Server")
                 Layout.fillWidth: true
                 elide: Text.ElideRight
-            }
-
-            Rectangle {
-                visible: root.serverIsBuiltIn
-                radius: Kirigami.Units.smallSpacing
-                height: Kirigami.Units.gridUnit * 1.0
-                width: builtInLabel.width + Kirigami.Units.smallSpacing * 2
-                color: Kirigami.Theme.hoverColor
-                Layout.alignment: Qt.AlignVCenter
-
-                QQC2.Label {
-                    id: builtInLabel
-                    anchors.centerIn: parent
-                    text: i18nc("@info", "Built-in")
-                    font.pointSize: Kirigami.Theme.smallFont.pointSize
-                    color: Kirigami.Theme.textColor
-                }
             }
 
             Rectangle {
@@ -95,7 +76,6 @@ Kirigami.AbstractCard {
             }
 
             QQC2.ToolButton {
-                visible: !root.serverIsBuiltIn
                 icon.name: "document-edit-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18nc("@action:button", "Edit")
@@ -108,7 +88,6 @@ Kirigami.AbstractCard {
             }
 
             QQC2.ToolButton {
-                visible: !root.serverIsBuiltIn
                 icon.name: "delete-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18nc("@action:button", "Remove")
@@ -168,8 +147,6 @@ Kirigami.AbstractCard {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.largeSpacing
-                visible: root.serverType === "remote"
-
                 QQC2.Label {
                     text: i18nc("@label", "URL:")
                     font: Kirigami.Theme.smallFont
@@ -188,46 +165,6 @@ Kirigami.AbstractCard {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: Kirigami.Units.largeSpacing
-                visible: root.serverType === "stdio"
-
-                QQC2.Label {
-                    text: i18nc("@label", "Command:")
-                    font: Kirigami.Theme.smallFont
-                    color: Kirigami.Theme.disabledTextColor
-                }
-
-                QQC2.Label {
-                    text: root.serverCommand != "" ? root.serverCommand : i18nc("@info", "Not set")
-                    font: Kirigami.Theme.defaultFont
-                    color: root.serverCommand != "" ? Kirigami.Theme.textColor : Kirigami.Theme.disabledTextColor
-                    Layout.fillWidth: true
-                    wrapMode: Text.ElideMiddle
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Kirigami.Units.largeSpacing
-                visible: root.serverType === "remote"
-
-                QQC2.Label {
-                    text: i18nc("@label", "Type:")
-                    font: Kirigami.Theme.smallFont
-                    color: Kirigami.Theme.disabledTextColor
-                }
-
-                QQC2.Label {
-                    text: root.serverType === "stdio" ? i18nc("@info", "Local (stdio)") : i18nc("@info", "Remote (Streamable HTTP)")
-                    font: Kirigami.Theme.defaultFont
-                    color: Kirigami.Theme.textColor
-                    Layout.fillWidth: true
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Kirigami.Units.largeSpacing
-                visible: root.serverType === "remote"
 
                 QQC2.Label {
                     text: i18nc("@label", "Token:")

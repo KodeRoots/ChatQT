@@ -80,28 +80,16 @@ Kirigami.Page {
         var displayName = server.displayName || server.id
         applicationWindow().showPassiveNotification(i18n("Connecting to %1…").arg(displayName))
 
-        if (server.type === "stdio") {
-            if (!server.command) {
-                applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no command configured").arg(displayName))
-                return
-            }
-            var envMap = {}
-            if (server.env) { try { envMap = JSON.parse(server.env) } catch (e) {} }
-            var argsList = []
-            if (server.args) { argsList = server.args.split(/\s+/).filter(function(a) { return a.length > 0 }) }
-            _mcpStartupNotifications[server.id] = displayName
-            McpProcessManager.startProcess(server.id, server.command, argsList, envMap)
-        } else {
-            if (!server.url) {
-                applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no URL configured").arg(displayName))
-                return
-            }
-            var headers = {}
-            if (server.token) { headers["Authorization"] = "Bearer " + server.token }
-            if (server.headers) {
-                try {
-                    var customHeaders = JSON.parse(server.headers)
-                    var keys = Object.keys(customHeaders)
+        if (!server.url) {
+            applicationWindow().showPassiveNotification(i18n("Failed to connect to %1: no URL configured").arg(displayName))
+            return
+        }
+        var headers = {}
+        if (server.token) { headers["Authorization"] = "Bearer " + server.token }
+        if (server.headers) {
+            try {
+                var customHeaders = JSON.parse(server.headers)
+                var keys = Object.keys(customHeaders)
                     for (var k = 0; k < keys.length; k++) { headers[keys[k]] = customHeaders[keys[k]] }
                 } catch (e) {}
             }
@@ -136,7 +124,6 @@ Kirigami.Page {
                     )
                 }
             )
-        }
     }
 
     function gatherMcpFunctions() {
@@ -527,11 +514,6 @@ Kirigami.Page {
             return
         }
 
-        if (foundServer.type === "stdio" || foundTools.type === "stdio") {
-            callStdioMcpTool(foundServer.id, mcpToolName, funcArgs, toolCall.id, funcName, listModel, toolCalls, currentIndex, oldLength, sessionId)
-            return
-        }
-
         McpClient.callTool(
             foundServer.url,
             foundTools.sessionId,
@@ -577,161 +559,7 @@ Kirigami.Page {
         )
     }
 
-    function callStdioMcpTool(serverId, toolName, arguments, toolCallId, funcName, listModel, toolCalls, currentIndex, oldLength, capturedSessionId) {
-        var request = McpClient.createJsonRpcRequest("tools/call", {
-            name: toolName,
-            arguments: arguments
-        })
-        var requestId = request.id
-        var jsonStr = JSON.stringify(request)
-
-        var pendingCalls = {}
-
-        pendingCalls[requestId] = {
-            toolCallId: toolCallId,
-            funcName: funcName,
-            listModel: listModel,
-            toolCalls: toolCalls,
-            currentIndex: currentIndex,
-            oldLength: oldLength,
-            capturedSessionId: capturedSessionId
-        }
-
-        if (!_stdioPendingCalls) _stdioPendingCalls = {}
-        _stdioPendingCalls[requestId] = pendingCalls[requestId]
-
-        McpProcessManager.sendMessage(serverId, jsonStr, requestId)
-    }
-
-    property var _stdioPendingCalls: ({})
     property var _mcpStartupNotifications: ({})
-
-    Connections {
-        target: McpProcessManager
-
-        function onMessageReceived(serverId, jsonMessage) {
-            try {
-                var response = JSON.parse(jsonMessage)
-
-                if (response.result && response.result.tools) {
-                    McpClient.updateServerState(serverId, {
-                        status: "connected",
-                        tools: response.result.tools,
-                        toolCount: response.result.tools.length,
-                        type: "stdio",
-                        serverId: serverId
-                    })
-                    if (_mcpStartupNotifications[serverId]) {
-                        applicationWindow().showPassiveNotification(
-                            i18n("Connected to %1 — %2 tool(s) available").arg(_mcpStartupNotifications[serverId]).arg(response.result.tools.length)
-                        )
-                        delete _mcpStartupNotifications[serverId]
-                    }
-                }
-
-                if (response.method === "notifications/tools/list_changed") {
-                    var requestId = McpClient.getNextRequestId()
-                    var toolsRequest = McpClient.createJsonRpcRequest("tools/list", {})
-                    McpProcessManager.sendMessage(serverId, JSON.stringify(toolsRequest), requestId)
-                }
-
-                if (!response.id || !_stdioPendingCalls || !_stdioPendingCalls[response.id]) return
-
-                var pending = _stdioPendingCalls[response.id]
-                delete _stdioPendingCalls[response.id]
-
-                if (response.result) {
-                    var resultText = ""
-                    var isError = response.result.isError || false
-
-                    if (response.result.content) {
-                        for (var i = 0; i < response.result.content.length; i++) {
-                            var item = response.result.content[i]
-                            if (item.type === "text") resultText += item.text
-                            else if (item.type === "image") resultText += "[Image data]"
-                            else if (item.type === "audio") resultText += "[Audio data]"
-                            else if (item.type === "resource") resultText += (item.resource.text || item.resource.uri || "[Resource]")
-                        }
-                    }
-
-                    if (isError) {
-                        resultText = i18n("Error: %1").arg(resultText)
-                    }
-
-                    var stdioSessionId = pending.capturedSessionId || currentSessionId
-                    var stdioIsActive = stdioSessionId === currentSessionId
-
-                    if (stdioIsActive) {
-                        pending.listModel.setProperty(pending.listModel.count - 1, "content",
-                            i18n("%1: %2").arg(pending.funcName).arg(resultText.substring(0, 500)))
-                    }
-
-                    if (stdioSessionId !== "") {
-                        SessionStore.addMessage(stdioSessionId, "tool",
-                            i18n("%1 result: %2").arg(pending.funcName).arg(resultText.substring(0, 500)), "")
-                    }
-
-                    promptArray.push({
-                        "role": "tool",
-                        "tool_call_id": pending.toolCallId,
-                        "content": resultText
-                    })
-
-                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel, stdioSessionId)
-                } else if (response.error) {
-                    var errorMsg = i18n("Tool %1 failed: %2").arg(pending.funcName).arg(response.error.message || "Unknown error")
-                    var errSessionId = pending.capturedSessionId || currentSessionId
-                    var errIsActive = errSessionId === currentSessionId
-
-                    if (errIsActive) {
-                        pending.listModel.setProperty(pending.listModel.count - 1, "content", errorMsg)
-                    }
-
-                    promptArray.push({
-                        "role": "tool",
-                        "tool_call_id": pending.toolCallId,
-                        "content": errorMsg
-                    })
-
-                    executeNextMcpToolCall(pending.toolCalls, pending.currentIndex + 1, pending.oldLength, pending.listModel, errSessionId)
-                }
-            } catch (e) {
-                console.warn("Failed to process stdio MCP response:", e)
-            }
-        }
-
-        function onProcessStatusChanged(serverId, status) {
-            if (status === "connected") {
-                McpClient.updateServerState(serverId, { status: "connected" })
-            } else if (status === "disconnected") {
-                McpClient.updateServerState(serverId, { status: "disconnected", tools: [], toolCount: 0 })
-                if (_mcpStartupNotifications[serverId]) {
-                    applicationWindow().showPassiveNotification(
-                        i18n("%1 disconnected").arg(_mcpStartupNotifications[serverId])
-                    )
-                    delete _mcpStartupNotifications[serverId]
-                }
-            } else if (status === "error") {
-                McpClient.updateServerState(serverId, { status: "error", tools: [], toolCount: 0 })
-                if (_mcpStartupNotifications[serverId]) {
-                    applicationWindow().showPassiveNotification(
-                        i18n("Failed to start %1").arg(_mcpStartupNotifications[serverId])
-                    )
-                    delete _mcpStartupNotifications[serverId]
-                }
-            }
-        }
-
-        function onProcessError(serverId, errorMessage) {
-            McpClient.updateServerState(serverId, { status: "error" })
-            if (_mcpStartupNotifications[serverId]) {
-                applicationWindow().showPassiveNotification(
-                    i18n("Failed to start %1: %2").arg(_mcpStartupNotifications[serverId]).arg(errorMessage)
-                )
-                delete _mcpStartupNotifications[serverId]
-            }
-        }
-    }
 
     function sendMcpFollowUpRequest(oldLength, listModel, capturedSessionId) {
         var sessionId = capturedSessionId || currentSessionId
@@ -852,12 +680,9 @@ Kirigami.Page {
     }
 
     function buildSystemMessage() {
-        var skills = SkillScanner.discoverSkills(appSettings.getSkillFolders())
-        var agentContent = ""
-        if (appSettings.agentFilePath && appSettings.agentFilePath !== "") {
-            agentContent = SkillScanner.readFile(appSettings.agentFilePath)
-        }
-        return SkillScanner.buildSystemMessage(skills, agentContent || "")
+        var soul = appSettings.soulContent || ""
+        if (soul.trim() === "") return ""
+        return soul
     }
 
     function ensureSystemMessage() {

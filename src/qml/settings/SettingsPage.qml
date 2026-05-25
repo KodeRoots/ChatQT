@@ -41,13 +41,13 @@ Kirigami.ScrollablePage {
     }
 
     Component {
-        id: skillsMcpPage
-        SettingsSkillsMCP {}
+        id: mcpPage
+        SettingsMCP {}
     }
 
     Component {
-        id: agentPage
-        SettingsAgent {}
+        id: soulPage
+        SettingsSoul {}
     }
 
     FormCard.FormCard {
@@ -118,30 +118,30 @@ Kirigami.ScrollablePage {
 
         FormCard.FormDelegateSeparator {
             above: openaiCompatibleButton
-            below: skillsMcpButton
+            below: mcpButton
         }
 
         FormCard.FormButtonDelegate {
-            id: skillsMcpButton
-            text: i18nc("@action:button", "Skills and MCPs")
-            description: i18nc("@info:whatsthis", "Configure skills folders and MCP servers")
+            id: mcpButton
+            text: i18nc("@action:button", "MCP Servers")
+            description: i18nc("@info:whatsthis", "Configure remote MCP servers")
             icon.name: "network-connect"
-            onClicked: Kirigami.PageStack.push(skillsMcpPage, {
+            onClicked: Kirigami.PageStack.push(mcpPage, {
                 settings: root.settings
             })
         }
 
         FormCard.FormDelegateSeparator {
-            above: skillsMcpButton
-            below: agentButton
+            above: mcpButton
+            below: soulButton
         }
 
         FormCard.FormButtonDelegate {
-            id: agentButton
-            text: i18nc("@action:button", "Agent")
-            description: i18nc("@info:whatsthis", "Configure agent instructions (AGENTS.md)")
+            id: soulButton
+            text: i18nc("@action:button", "Soul")
+            description: i18nc("@info:whatsthis", "Configure the AI personality and behavior")
             icon.name: "user-identity"
-            onClicked: Kirigami.PageStack.push(agentPage, {
+            onClicked: Kirigami.PageStack.push(soulPage, {
                 settings: root.settings
             })
         }

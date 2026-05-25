@@ -13,8 +13,6 @@ target_sources(chatqt
     main.cpp
     sessionstore.cpp
     hotreload.cpp
-    mcpprocessmanager.cpp
-    skillscanner.cpp
 )
 
 ecm_target_qml_sources(chatqt
@@ -33,12 +31,10 @@ ecm_target_qml_sources(chatqt
     qml/settings/SettingsOpenClaw.qml
     qml/settings/SettingsOpenAICompatible.qml
     qml/settings/SettingsMCP.qml
-    qml/settings/SettingsSkillsMCP.qml
-    qml/settings/SettingsAgent.qml
+    qml/settings/SettingsSoul.qml
     qml/logic/AppSettings.qml
     qml/logic/ApiClient.js
     qml/logic/McpClient.js
-    qml/logic/SkillManager.js
 )
 
 target_link_libraries(chatqt PRIVATE
