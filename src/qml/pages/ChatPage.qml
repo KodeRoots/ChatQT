@@ -935,8 +935,6 @@ Kirigami.Page {
             var m = messages[j]
             if (m.role === "user" || m.role === "assistant") {
                 promptArray.push({ "role": m.role, "content": m.content, "images": [] })
-            } else if (m.role === "tool") {
-                promptArray.push({ "role": "tool", "content": m.content })
             }
         }
 
