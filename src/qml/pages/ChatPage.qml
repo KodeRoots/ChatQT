@@ -168,8 +168,6 @@ Kirigami.Page {
     function buildProviderOptions() {
         var options = [
             { text: "Ollama", value: "ollama" },
-            { text: "OpenCode", value: "opencode" },
-            { text: "Pi", value: "pi" }
         ]
 
         if (appSettings && appSettings.openclawEnabled) {
@@ -208,8 +206,7 @@ Kirigami.Page {
             case "ollama": return appSettings.ollamaEnabled
             case "openclaw": return appSettings.openclawEnabled
             case "openai-compatible": return appSettings.openaiCompatibleEnabled
-            case "opencode": return appSettings.opencodeEnabled
-            case "pi": return appSettings.piEnabled
+
             default: return true
         }
     })
@@ -281,15 +278,9 @@ Kirigami.Page {
         } else if (provider.startsWith("openclaw")) {
             var instance = appSettings.getSelectedOpenClawInstance()
             return instance && instance.url && instance.token;
-        } else if (provider === "opencode") {
-            return appSettings.opencodeUrl &&
-                   appSettings.opencodeUsername &&
-                   appSettings.opencodePassword;
         } else if (currentProvider.startsWith("openai-compatible")) {
             var openaiProvider = appSettings.getSelectedOpenAICompatibleProvider()
             return openaiProvider && openaiProvider.url && openaiProvider.token && openaiProvider.model;
-        } else if (provider === "pi") {
-            return PiProcessManager.running;
         }
         return false;
     }
@@ -299,12 +290,8 @@ Kirigami.Page {
             return i18n("No local model found.\nPlease install some first.\n\nIf you need help, check Ollama documentation.");
         } else if (currentProvider.startsWith("openclaw")) {
             return i18n("OpenClaw instance not configured.\nPlease set URL and Token in settings.");
-        } else if (currentProvider === "opencode") {
-            return i18n("OpenCode not configured.\nPlease set URL, Username, Password and Model in settings.");
         } else if (currentProvider.startsWith("openai-compatible")) {
             return i18n("OpenAI Compatible provider not configured.\nPlease configure it in settings.");
-        } else if (currentProvider === "pi") {
-            return i18n("Pi is not running.\nPlease start it in Settings or check the binary path.");
         }
         return i18n("Provider not configured.");
     }
@@ -800,25 +787,6 @@ Kirigami.Page {
                     completeCb
                 )
             }
-        } else if (currentProvider === "opencode") {
-            activeXhr = OpenCodeClient.requestOpenCode(
-                appSettings.opencodeUrl,
-                appSettings.opencodeUsername,
-                appSettings.opencodePassword,
-                appSettings.opencodeModel,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            )
-        } else if (currentProvider === "pi") {
-            activeXhr = PiClient.requestPi(
-                PiProcessManager,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            )
         }
     }
 
@@ -830,10 +798,6 @@ Kirigami.Page {
         // Abort active request based on provider
         if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
             ApiClient.abortActiveRequest();
-        } else if (currentProvider === "opencode") {
-            OpenCodeClient.abortActiveRequest();
-        } else if (currentProvider === "pi") {
-            PiClient.abortActiveRequest();
         }
         activeXhr = null;
 
@@ -867,10 +831,6 @@ Kirigami.Page {
         // Abort active request
         if (currentProvider === "ollama" || currentProvider.startsWith("openclaw") || currentProvider.startsWith("openai-compatible")) {
             ApiClient.abortActiveRequest();
-        } else if (currentProvider === "opencode") {
-            OpenCodeClient.abortActiveRequest();
-        } else if (currentProvider === "pi") {
-            PiClient.abortActiveRequest();
         }
         activeXhr = null;
 
@@ -1033,25 +993,6 @@ Kirigami.Page {
                     mcpFunctions.length > 0 ? mcpFunctions : undefined
                 );
             }
-        } else if (currentProvider === "opencode") {
-            activeXhr = OpenCodeClient.requestOpenCode(
-                appSettings.opencodeUrl,
-                appSettings.opencodeUsername,
-                appSettings.opencodePassword,
-                appSettings.opencodeModel,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            );
-        } else if (currentProvider === "pi") {
-            activeXhr = PiClient.requestPi(
-                PiProcessManager,
-                promptArray,
-                listModel,
-                streamingCb,
-                completeCb
-            );
         }
     }
 
@@ -1078,7 +1019,6 @@ Kirigami.Page {
         promptArray = [];
         currentSessionId = "";
         appSettings.lastActiveSessionId = "";
-        OpenCodeClient.resetSession();
     }
 
     function updateSessionLoadingState(sessionId, loading) {
@@ -1114,10 +1054,6 @@ Kirigami.Page {
             return model || "OpenClaw";
         } else if (provider.startsWith("openai-compatible:")) {
             return model || "OpenAI Compatible";
-        } else if (provider === "opencode") {
-            return "OpenCode";
-        } else if (provider === "pi") {
-            return "Pi";
         }
         return provider;
     }
@@ -1144,8 +1080,6 @@ Kirigami.Page {
         }
 
         listModelController.clear();
-        OpenCodeClient.resetSession();
-
         var messages = SessionStore.loadSession(sessionId);
         for (var i = 0; i < messages.length; i++) {
             var msg = messages[i];
@@ -1235,9 +1169,6 @@ Kirigami.Page {
 
         initMcpServers()
 
-        if (currentProvider === "pi" && PiProcessManager.autoStart) {
-            PiProcessManager.start();
-        }
         messageInput.focusInput();
         refreshSessionList();
 
@@ -1363,22 +1294,7 @@ Kirigami.Page {
             Layout.fillWidth: true
         }
 
-        // OpenCode server status warning
-        Kirigami.InlineMessage {
-            Layout.margins: Kirigami.Units.smallSpacing
-            Layout.fillWidth: true
-            visible: currentProvider === "opencode" && !ProcessManager.running
-            type: Kirigami.MessageType.Warning
-            text: ProcessManager.lastError || i18n("OpenCode server is not running. Start it in Settings.")
-        }
 
-        Kirigami.InlineMessage {
-            Layout.margins: Kirigami.Units.smallSpacing
-            Layout.fillWidth: true
-            visible: currentProvider === "pi" && !PiProcessManager.running
-            type: Kirigami.MessageType.Warning
-            text: PiProcessManager.lastError || i18n("Pi is not running. Start it in Settings.")
-        }
 
         ListView {
             id: listView

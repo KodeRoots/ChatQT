@@ -11,13 +11,10 @@ qt_policy(SET QTP0001 NEW)
 target_sources(chatqt
     PRIVATE
     main.cpp
-    processmanager.cpp
-    piprocessmanager.cpp
     sessionstore.cpp
     hotreload.cpp
     mcpprocessmanager.cpp
     skillscanner.cpp
-    flatpakutils.cpp
 )
 
 ecm_target_qml_sources(chatqt
@@ -26,7 +23,6 @@ ecm_target_qml_sources(chatqt
     qml/pages/ChatPage.qml
     qml/components/ChatMessage.qml
     qml/components/MessageInput.qml
-    qml/components/ServerStatusIndicator.qml
     qml/components/ProviderCard.qml
     qml/components/InstanceCard.qml
     qml/components/SessionCard.qml
@@ -36,15 +32,11 @@ ecm_target_qml_sources(chatqt
     qml/settings/SettingsGeneral.qml
     qml/settings/SettingsOpenClaw.qml
     qml/settings/SettingsOpenAICompatible.qml
-    qml/settings/SettingsOpenCode.qml
-    qml/settings/SettingsPi.qml
     qml/settings/SettingsMCP.qml
     qml/settings/SettingsSkillsMCP.qml
     qml/settings/SettingsAgent.qml
     qml/logic/AppSettings.qml
     qml/logic/ApiClient.js
-    qml/logic/OpenCodeClient.js
-    qml/logic/PiClient.js
     qml/logic/McpClient.js
     qml/logic/SkillManager.js
 )

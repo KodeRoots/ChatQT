@@ -63,32 +63,6 @@ Kirigami.ScrollablePage {
             }
         }
 
-        QQC2.CheckBox {
-            id: opencodeCheckBox
-            visible: root.settings && root.settings.experimentalFeatures
-            Kirigami.FormData.label: i18nc("@label:checkbox", "OpenCode:")
-            text: i18nc("@option:check", "Enable OpenCode provider")
-            checked: root.settings ? root.settings._opencodeEnabledStored : false
-            onCheckedChanged: {
-                if (root.settings) {
-                    root.settings._opencodeEnabledStored = checked;
-                }
-            }
-        }
-
-        QQC2.CheckBox {
-            id: piCheckBox
-            visible: root.settings && root.settings.experimentalFeatures
-            Kirigami.FormData.label: i18nc("@label:checkbox", "Pi:")
-            text: i18nc("@option:check", "Enable Pi provider")
-            checked: root.settings ? root.settings._piEnabledStored : false
-            onCheckedChanged: {
-                if (root.settings) {
-                    root.settings._piEnabledStored = checked;
-                }
-            }
-        }
-
         Kirigami.Separator {
             Kirigami.FormData.label: i18nc("@title:group", "MCP (Model Context Protocol):")
             Kirigami.FormData.isSection: true

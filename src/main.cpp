@@ -19,8 +19,6 @@
 #include <KCrash>
 
 #include "chatqt_version.h"
-#include "processmanager.h"
-#include "piprocessmanager.h"
 #include "sessionstore.h"
 #include "hotreload.h"
 #include "mcpprocessmanager.h"
@@ -63,12 +61,6 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("experimentalFeaturesEnabled"),
         !qEnvironmentVariableIsEmpty("CHATQT_ENABLE_EXPERIMENTAL_FEATURES"));
 
-    // Register ProcessManager as singleton
-    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "ProcessManager", ProcessManager::instance());
-
-    // Register PiProcessManager as singleton
-    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "PiProcessManager", PiProcessManager::instance());
-
     // Register SessionStore as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", SessionStore::instance());
 
@@ -77,9 +69,6 @@ int main(int argc, char *argv[])
 
     // Register SkillScanner as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SkillScanner", SkillScanner::instance());
-
-    QObject::connect(&app, &QApplication::aboutToQuit,
-                     ProcessManager::instance(), &ProcessManager::cleanShutdown);
 
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, [](const QList<QQmlError> &warnings) {
         for (const QQmlError &warning : warnings) {

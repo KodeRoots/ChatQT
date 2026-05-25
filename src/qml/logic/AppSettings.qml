@@ -20,10 +20,6 @@ QtObject {
     property string selectedOpenAICompatibleProviderId: _settings.value("selectedOpenAICompatibleProviderId", "")
     property string openclawInstances: _settings.value("openclawInstances", "[]")
     property string selectedOpenClawInstanceId: _settings.value("selectedOpenClawInstanceId", "")
-    property string opencodeUrl: _settings.value("opencodeUrl", "http://127.0.0.1:4096")
-    property string opencodeUsername: _settings.value("opencodeUsername", "")
-    property string opencodePassword: _settings.value("opencodePassword", "")
-    property string opencodeModel: _settings.value("opencodeModel", "")
     property string lastActiveSessionId: _settings.value("lastActiveSessionId", "")
 
     // MCP settings
@@ -40,19 +36,13 @@ QtObject {
     property bool experimentalFeatures: typeof experimentalFeaturesEnabled !== 'undefined' ? experimentalFeaturesEnabled : false
 
     property bool _openclawEnabledStored: _settings.value("openclawEnabled", false)
-    property bool _opencodeEnabledStored: _settings.value("opencodeEnabled", false)
-    property bool _piEnabledStored: _settings.value("piEnabled", false)
 
     property bool openclawEnabled: experimentalFeatures && _openclawEnabledStored
     property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
-    property bool opencodeEnabled: experimentalFeatures && _opencodeEnabledStored
-    property bool piEnabled: experimentalFeatures && _piEnabledStored
 
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
     readonly property bool isOpenAICompatible: provider === "openai-compatible"
-    readonly property bool isOpenCode: provider === "opencode"
-    readonly property bool isPi: provider === "pi"
 
     function getProviderDisplayName() {
         if (provider === "ollama") return "Ollama"
@@ -70,8 +60,6 @@ QtObject {
             }
             return openaiCompatibleModel || "OpenAI"
         }
-        if (provider === "opencode") return "OpenCode"
-        if (provider === "pi") return "Pi"
         return "ChatQT"
     }
 
@@ -276,15 +264,9 @@ QtObject {
         _settings.setValue("openaiCompatibleToken", openaiCompatibleToken)
         _settings.setValue("openaiCompatibleModel", openaiCompatibleModel)
         _settings.setValue("openaiCompatibleProviders", openaiCompatibleProviders)
-        _settings.setValue("opencodeUrl", opencodeUrl)
-        _settings.setValue("opencodeUsername", opencodeUsername)
-        _settings.setValue("opencodePassword", opencodePassword)
-        _settings.setValue("opencodeModel", opencodeModel)
         _settings.setValue("ollamaEnabled", ollamaEnabled)
         _settings.setValue("openclawEnabled", _openclawEnabledStored)
         _settings.setValue("openaiCompatibleEnabled", openaiCompatibleEnabled)
-        _settings.setValue("opencodeEnabled", _opencodeEnabledStored)
-        _settings.setValue("piEnabled", _piEnabledStored)
         _settings.setValue("selectedOpenAICompatibleProviderId", selectedOpenAICompatibleProviderId)
         _settings.setValue("openclawInstances", openclawInstances)
         _settings.setValue("selectedOpenClawInstanceId", selectedOpenClawInstanceId)
@@ -307,15 +289,9 @@ QtObject {
     onOpenaiCompatibleTokenChanged: save()
     onOpenaiCompatibleModelChanged: save()
     onOpenaiCompatibleProvidersChanged: save()
-    onOpencodeUrlChanged: save()
-    onOpencodeUsernameChanged: save()
-    onOpencodePasswordChanged: save()
-    onOpencodeModelChanged: save()
     onOllamaEnabledChanged: save()
     onOpenclawEnabledChanged: save()
     onOpenaiCompatibleEnabledChanged: save()
-    onOpencodeEnabledChanged: save()
-    onPiEnabledChanged: save()
     onSelectedOpenAICompatibleProviderIdChanged: save()
     onOpenclawInstancesChanged: save()
     onSelectedOpenClawInstanceIdChanged: save()
@@ -327,25 +303,6 @@ QtObject {
 
     Component.onCompleted: {
         ensureDefaultMcpServers()
-
-        if (typeof ProcessManager !== "undefined") {
-            opencodeUrl = ProcessManager.serverUrl
-            if (ProcessManager.password !== "") {
-                opencodeUsername = "opencode"
-                opencodePassword = ProcessManager.password
-            }
-
-            ProcessManager.serverUrlChanged.connect(function() {
-                opencodeUrl = ProcessManager.serverUrl
-            })
-            ProcessManager.passwordChanged.connect(function() {
-                if (ProcessManager.password !== "") {
-                    opencodeUsername = "opencode"
-                    opencodePassword = ProcessManager.password
-                }
-            })
-        }
-
         if (openclawInstances === "[]") {
             if (openclawUrl !== "http://127.0.0.1:18789" || openclawToken !== "") {
                 var migratedInstance = {

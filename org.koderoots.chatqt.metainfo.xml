@@ -31,7 +31,7 @@
       chatting with AI models via OpenAI-compatible APIs.
     </p>
     <p>
-      <em>Multiple provider support</em>: Connect to OpenAI, OpenCode, or any OpenAI-compatible API.
+      <em>Multiple provider support</em>: Connect to Ollama, OpenClaw, or any OpenAI-compatible API.
     </p>
     <p>
       <em>Simple interface</em>: Clean and intuitive design built with Kirigami for a seamless experience.
@@ -96,7 +96,7 @@
           <li>Load AGENTS.md or CLAUDE.md files for persistent AI agent instructions</li>
           <li>System tray integration for minimizing and quick access</li>
           <li>Flatpak support with proper sandboxing</li>
-          <li>Experimental providers (disabled by default): OpenClaw, OpenCode, and Pi agent</li>
+          <li>Experimental provider (disabled by default): OpenClaw</li>
         </ul>
       </description>
       <url type="details">https://github.com/KodeRoots/ChatQT/releases/tag/v1.0.0</url>

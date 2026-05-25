@@ -17,8 +17,6 @@ Kirigami.ScrollablePage {
 
     property var settings: null
     property bool openclawVisible: settings ? settings.openclawEnabled : false
-    property bool opencodeVisible: settings ? settings.opencodeEnabled : false
-    property bool piVisible: settings ? settings.piEnabled : false
 
     padding: 0
 
@@ -40,16 +38,6 @@ Kirigami.ScrollablePage {
     Component {
         id: openaiCompatiblePage
         SettingsOpenAICompatible {}
-    }
-
-    Component {
-        id: opencodePage
-        SettingsOpenCode {}
-    }
-
-    Component {
-        id: piPage
-        SettingsPi {}
     }
 
     Component {
@@ -130,42 +118,7 @@ Kirigami.ScrollablePage {
 
         FormCard.FormDelegateSeparator {
             above: openaiCompatibleButton
-            below: opencodeButton
-            visible: root.opencodeVisible
-        }
-
-        FormCard.FormButtonDelegate {
-            id: opencodeButton
-            visible: root.opencodeVisible
-            text: i18nc("@action:button", "OpenCode")
-            description: i18nc("@info:whatsthis", "Configure OpenCode settings")
-            icon.name: "network-server"
-            onClicked: Kirigami.PageStack.push(opencodePage, {
-                settings: root.settings
-            })
-        }
-
-        FormCard.FormDelegateSeparator {
-            above: opencodeButton
-            below: piButton
-            visible: root.opencodeVisible || root.piVisible
-        }
-
-        FormCard.FormButtonDelegate {
-            id: piButton
-            visible: root.piVisible
-            text: i18nc("@action:button", "Pi")
-            description: i18nc("@info:whatsthis", "Configure Pi (RPC mode)")
-            icon.name: "network-server"
-            onClicked: Kirigami.PageStack.push(piPage, {
-                settings: root.settings
-            })
-        }
-
-        FormCard.FormDelegateSeparator {
-            above: piButton
             below: skillsMcpButton
-            visible: root.piVisible
         }
 
         FormCard.FormButtonDelegate {
