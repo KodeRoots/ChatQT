@@ -424,6 +424,8 @@ Kirigami.Page {
             assistantMsg["tool_calls"] = toolCalls
         }
 
+        promptArray.push(assistantMsg)
+
         var sessionPA = sessionPromptArrays[sessionId] || promptArray
         sessionPA.push(assistantMsg)
         sessionPromptArrays[sessionId] = sessionPA
