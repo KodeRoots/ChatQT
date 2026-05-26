@@ -100,6 +100,7 @@ Kirigami.AbstractCard {
             id: textMessage
 
             Layout.fillWidth: true
+            visible: root.messageText !== ""
 
             topPadding: Kirigami.Units.smallSpacing
             bottomPadding: Kirigami.Units.smallSpacing
