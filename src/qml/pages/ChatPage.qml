@@ -725,10 +725,12 @@ Kirigami.Page {
         var soul = (appSettings.soulContent || "").trim()
         var memory = (appSettings.memoryContent || "").trim()
 
+        var today = Qt.formatDateTime(new Date(), "yyyy-MM-dd (dddd)")
+        parts.push("Current date: " + today)
+
         if (soul !== "") parts.push(soul)
         if (memory !== "") parts.push("\n# Memory\n" + memory)
 
-        if (parts.length === 0) return ""
         return parts.join("\n\n")
     }
 
