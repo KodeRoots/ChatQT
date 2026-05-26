@@ -46,20 +46,16 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/MainWindow.png</image>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.1.0/MainWindow.png</image>
       <caption>ChatQT main window</caption>
     </screenshot>
     <screenshot>
-      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/SettingsAgent.png</image>
-      <caption>Agent settings</caption>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.1.0/SettingsMCPs.png</image>
+      <caption>MCP servers settings</caption>
     </screenshot>
     <screenshot>
-      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/SettingsOpenAICompatible.png</image>
+      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.1.0/SettingsOpenAICompatible.png</image>
       <caption>OpenAI Compatible settings</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://kaftnndedwgveoywpzyl.supabase.co/storage/v1/object/public/flathub/chatqt/1.0.0/SettingsSkillsMCPs.png</image>
-      <caption>Skills and MCP servers settings</caption>
     </screenshot>
   </screenshots>
 
@@ -70,6 +66,24 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="1.1.0" date="2026-05-26">
+      <description>
+        <p>Refocusing release. ChatQT had drifted from its original goal of being a simple chat assistant. This version realigns the project with its core purpose, removing features that belong in coding agents — not chat clients — and ensuring cleaner, more maintainable code.</p>
+        <ul>
+          <li>Removed coding agent features (OpenCode, Pi process managers, SkillScanner, AGENTS.md loader) that were outside the app's chat assistant scope</li>
+          <li>Removed stdio MCP server support and built-in MCP defaults (bash-mcp, filesystem) which required flatpak-spawn — only remote (Streamable HTTP) MCP servers remain</li>
+          <li>Removed flatpak-spawn --host and --talk-name=org.freedesktop.Flatpak for Flathub compliance</li>
+          <li>Added Soul: define the AI's personality and behavior directly in settings</li>
+          <li>Added Memory: the AI can save important information to remember across conversations</li>
+          <li>Added save_memory tool for persistent memory management</li>
+          <li>Fixed OpenAI-compatible providers not continuing after MCP tool calls</li>
+          <li>Fixed session restoration for OpenAI-compatible providers</li>
+          <li>Fixed empty assistant bubbles taking up space when only thinking content is present</li>
+          <li>Fixed tool messages appearing as empty assistant bubbles on session restore</li>
+        </ul>
+      </description>
+      <url type="details">https://github.com/KodeRoots/ChatQT/releases/tag/v1.1.0</url>
+    </release>
     <release version="1.0.1" date="2026-05-23">
       <description>
         <p>Bug fix release addressing thinking display and Flatpak tray icon issues.</p>
@@ -83,20 +97,16 @@
     </release>
     <release version="1.0.0" date="2026-05-23">
       <description>
-        <p>This is the first stable release of ChatQT, a native AI chat client for KDE Plasma built with Qt6, QML, and Kirigami.</p>
+        <p>Initial stable release of ChatQT, a native AI chat client for KDE Plasma built with Qt6, QML, and Kirigami.</p>
         <ul>
           <li>Connect to Ollama with automatic model discovery</li>
-          <li>Connect to any OpenAI-compatible API (OpenAI, DeepSeek, Groq, etc.) with multi-provider support and connection testing</li>
-          <li>Streaming responses with real-time token-by-token display</li>
+          <li>Connect to any OpenAI-compatible API with multi-provider support</li>
+          <li>Streaming responses with real-time display</li>
           <li>Toggle extended thinking/reasoning for supported models</li>
-          <li>Persistent chat sessions with sidebar navigation and auto-restore on launch</li>
-          <li>MCP (Model Context Protocol) support: Streamable HTTP remote servers and stdio-based local servers</li>
-          <li>Pre-configured built-in MCP servers (Bash and Filesystem) with configurable tool call depth</li>
-          <li>Skill discovery: scan folders for SKILL.md files and inject them as system prompts</li>
-          <li>Load AGENTS.md or CLAUDE.md files for persistent AI agent instructions</li>
-          <li>System tray integration for minimizing and quick access</li>
-          <li>Flatpak support with proper sandboxing</li>
-          <li>Experimental provider (disabled by default): OpenClaw</li>
+          <li>Persistent chat sessions with sidebar navigation</li>
+          <li>Remote MCP (Model Context Protocol) server support</li>
+          <li>System tray integration</li>
+          <li>Flatpak support</li>
         </ul>
       </description>
       <url type="details">https://github.com/KodeRoots/ChatQT/releases/tag/v1.0.0</url>
