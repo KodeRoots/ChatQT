@@ -26,6 +26,9 @@ QtObject {
     property string mcpServers: _settings.value("mcpServers", "[]")
     property string mcpToolResults: "{}"
 
+    // Memory settings
+    property string memoryContent: _settings.value("memoryContent", "")
+
     // Soul settings
     property string soulContent: _settings.value("soulContent", "")
 
@@ -215,6 +218,7 @@ QtObject {
         _settings.setValue("lastActiveSessionId", lastActiveSessionId)
         _settings.setValue("mcpServers", mcpServers)
         _settings.setValue("soulContent", soulContent)
+        _settings.setValue("memoryContent", memoryContent)
         _settings.sync()
     }
 
@@ -237,6 +241,7 @@ QtObject {
     onSelectedOpenClawInstanceIdChanged: save()
     onLastActiveSessionIdChanged: save()
     onSoulContentChanged: save()
+    onMemoryContentChanged: save()
     onMcpServersChanged: save()
 
     Component.onCompleted: {

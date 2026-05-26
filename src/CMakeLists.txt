@@ -32,6 +32,7 @@ ecm_target_qml_sources(chatqt
     qml/settings/SettingsOpenAICompatible.qml
     qml/settings/SettingsMCP.qml
     qml/settings/SettingsSoul.qml
+    qml/settings/SettingsMemory.qml
     qml/logic/AppSettings.qml
     qml/logic/ApiClient.js
     qml/logic/McpClient.js

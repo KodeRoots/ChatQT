@@ -128,6 +128,22 @@ Kirigami.Page {
 
     function gatherMcpFunctions() {
         var functions = []
+
+        functions.push({
+            name: "save_memory",
+            description: "Save important information to remember across conversations. Call this when the user shares preferences, personal details, or context worth preserving. The content replaces all previous memory.",
+            parameters: {
+                type: "object",
+                properties: {
+                    content: {
+                        type: "string",
+                        description: "The full updated memory content to save"
+                    }
+                },
+                required: ["content"]
+            }
+        })
+
         var servers = appSettings.getEnabledMcpServers()
         for (var i = 0; i < servers.length; i++) {
             var state = McpClient.getServerState(servers[i].id)
@@ -475,6 +491,23 @@ Kirigami.Page {
         })
 
         if (!isMcp) {
+            if (funcName === "save_memory") {
+                var memContent = funcArgs.content || ""
+                appSettings.memoryContent = memContent
+
+                if (isActiveSession) {
+                    listModel.setProperty(listModel.count - 1, "content",
+                        i18n("Memory saved"))
+                }
+                promptArray.push({
+                    "role": "tool",
+                    "tool_call_id": toolCall.id,
+                    "content": "Memory saved successfully"
+                })
+                executeNextMcpToolCall(toolCalls, currentIndex + 1, oldLength, listModel, sessionId)
+                return
+            }
+
             var errorMsg = i18n("Tool %1 is not an MCP tool").arg(funcName)
             if (isActiveSession) listModel.setProperty(listModel.count - 1, "content", errorMsg)
             promptArray.push({
@@ -682,9 +715,15 @@ Kirigami.Page {
     }
 
     function buildSystemMessage() {
-        var soul = appSettings.soulContent || ""
-        if (soul.trim() === "") return ""
-        return soul
+        var parts = []
+        var soul = (appSettings.soulContent || "").trim()
+        var memory = (appSettings.memoryContent || "").trim()
+
+        if (soul !== "") parts.push(soul)
+        if (memory !== "") parts.push("\n# Memory\n" + memory)
+
+        if (parts.length === 0) return ""
+        return parts.join("\n\n")
     }
 
     function ensureSystemMessage() {

@@ -50,6 +50,11 @@ Kirigami.ScrollablePage {
         SettingsSoul {}
     }
 
+    Component {
+        id: memoryPage
+        SettingsMemory {}
+    }
+
     FormCard.FormCard {
         id: formCard
         width: parent.width
@@ -141,6 +146,21 @@ Kirigami.ScrollablePage {
             description: i18nc("@info:whatsthis", "Configure the AI personality and behavior")
             icon.name: "user-identity"
             onClicked: Kirigami.PageStack.push(soulPage, {
+                settings: root.settings
+            })
+        }
+
+        FormCard.FormDelegateSeparator {
+            above: soulButton
+            below: memoryButton
+        }
+
+        FormCard.FormButtonDelegate {
+            id: memoryButton
+            text: i18nc("@action:button", "Memory")
+            description: i18nc("@info:whatsthis", "View and edit what the AI remembers across conversations")
+            icon.name: "knotes"
+            onClicked: Kirigami.PageStack.push(memoryPage, {
                 settings: root.settings
             })
         }
