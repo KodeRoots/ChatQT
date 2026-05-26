@@ -82,7 +82,7 @@ Kirigami.ScrollablePage {
             id: generalButton
             text: i18nc("@action:button", "General")
             description: i18nc("@info:whatsthis", "Select the active AI provider")
-            icon.name: "preferences-system"
+            icon.name: "applications-system-symbolic"
             onClicked: Kirigami.PageStack.push(generalPage, {
                 settings: root.settings
             })
@@ -98,7 +98,7 @@ Kirigami.ScrollablePage {
             visible: root.openclawVisible
             text: i18nc("@action:button", "OpenClaw")
             description: i18nc("@info:whatsthis", "Configure OpenClaw URL and token")
-            icon.name: "network-server"
+            icon.name: "network-server-database-symbolic"
             onClicked: Kirigami.PageStack.push(openclawPage, {
                 settings: root.settings
             })
@@ -129,7 +129,7 @@ Kirigami.ScrollablePage {
             id: mcpButton
             text: i18nc("@action:button", "MCP Servers")
             description: i18nc("@info:whatsthis", "Configure remote MCP servers")
-            icon.name: "network-connect"
+            icon.name: "code-context-symbolic"
             onClicked: Kirigami.PageStack.push(mcpPage, {
                 settings: root.settings
             })
@@ -144,7 +144,7 @@ Kirigami.ScrollablePage {
             id: soulButton
             text: i18nc("@action:button", "Soul")
             description: i18nc("@info:whatsthis", "Configure the AI personality and behavior")
-            icon.name: "user-identity"
+            icon.name: "user-identity-symbolic"
             onClicked: Kirigami.PageStack.push(soulPage, {
                 settings: root.settings
             })
@@ -159,7 +159,7 @@ Kirigami.ScrollablePage {
             id: memoryButton
             text: i18nc("@action:button", "Memory")
             description: i18nc("@info:whatsthis", "View and edit what the AI remembers across conversations")
-            icon.name: "knotes"
+            icon.name: "kmouth-phrasebook-symbolic"
             onClicked: Kirigami.PageStack.push(memoryPage, {
                 settings: root.settings
             })
