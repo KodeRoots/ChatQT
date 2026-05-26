@@ -499,6 +499,12 @@ Kirigami.Page {
                     listModel.setProperty(listModel.count - 1, "content",
                         i18n("Memory saved"))
                 }
+
+                if (sessionId !== "") {
+                    SessionStore.addMessage(sessionId, "tool",
+                        i18n("save_memory: Memory saved"), "")
+                }
+
                 promptArray.push({
                     "role": "tool",
                     "tool_call_id": toolCall.id,
@@ -962,9 +968,14 @@ Kirigami.Page {
             else if (isErr) roleName = "Error";
             else roleName = "Assistant";
 
+            var displayContent = msg.content
+            if (msg.role === "assistant" && (!displayContent || displayContent.trim() === "")) {
+                continue
+            }
+
             listModelController.append({
                 "name": roleName,
-                "content": msg.content,
+                "content": displayContent,
                 "thinkingContent": msg.thinkingContent || ""
             });
         }
