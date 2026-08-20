@@ -6,6 +6,7 @@
 import QtQuick
 import QtCore
 import org.kde.chatqt
+import "HumanizerSoul.js" as HumanizerSoul
 
 QtObject {
     id: settings
@@ -31,6 +32,7 @@ QtObject {
 
     // Soul settings
     property string soulContent: _settings.value("soulContent", "")
+    property bool humanizedOutput: _settings.value("humanizedOutput", false)
 
     // Provider enable/disable settings
     property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
@@ -44,6 +46,18 @@ QtObject {
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
     readonly property bool isOpenAICompatible: provider === "openai-compatible"
+
+    function getEffectiveSoulContent() {
+        var soul = (soulContent || "").trim()
+        if (!humanizedOutput) {
+            return soul
+        }
+        var humanizer = (HumanizerSoul.content || "").trim()
+        if (soul === "") {
+            return humanizer
+        }
+        return soul + "\n\n" + humanizer
+    }
 
     function getProviderDisplayName() {
         if (provider === "ollama") return "Ollama"
@@ -218,6 +232,7 @@ QtObject {
         _settings.setValue("lastActiveSessionId", lastActiveSessionId)
         _settings.setValue("mcpServers", mcpServers)
         _settings.setValue("soulContent", soulContent)
+        _settings.setValue("humanizedOutput", humanizedOutput)
         _settings.setValue("memoryContent", memoryContent)
         _settings.sync()
     }
@@ -241,6 +256,7 @@ QtObject {
     onSelectedOpenClawInstanceIdChanged: save()
     onLastActiveSessionIdChanged: save()
     onSoulContentChanged: save()
+    onHumanizedOutputChanged: save()
     onMemoryContentChanged: save()
     onMcpServersChanged: save()
 

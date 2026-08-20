@@ -722,7 +722,7 @@ Kirigami.Page {
 
     function buildSystemMessage() {
         var parts = []
-        var soul = (appSettings.soulContent || "").trim()
+        var soul = (appSettings.getEffectiveSoulContent() || "").trim()
         var memory = (appSettings.memoryContent || "").trim()
 
         var today = Qt.formatDateTime(new Date(), "yyyy-MM-dd (dddd)")

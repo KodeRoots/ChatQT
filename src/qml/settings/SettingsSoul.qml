@@ -41,6 +41,16 @@ Kirigami.ScrollablePage {
             Layout.rightMargin: Kirigami.Units.largeSpacing
         }
 
+        Kirigami.InlineMessage {
+            visible: root.settings && root.settings.humanizedOutput
+            type: Kirigami.MessageType.Information
+            text: i18nc("@info", "Humanizer is enabled. Instructions for more human-like responses will be appended to your Soul content when sending messages.")
+            Layout.fillWidth: true
+            Layout.leftMargin: Kirigami.Units.largeSpacing
+            Layout.rightMargin: Kirigami.Units.largeSpacing
+            Layout.topMargin: Kirigami.Units.smallSpacing
+        }
+
         Kirigami.AbstractCard {
             Layout.fillWidth: true
             Layout.fillHeight: true

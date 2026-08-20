@@ -64,6 +64,31 @@ Kirigami.ScrollablePage {
         }
 
         Kirigami.Separator {
+            Kirigami.FormData.label: i18nc("@title:group", "Behavior:")
+            Kirigami.FormData.isSection: true
+        }
+
+        QQC2.CheckBox {
+            id: humanizedOutputCheckBox
+            Kirigami.FormData.label: i18nc("@label:checkbox", "Humanized output:")
+            text: i18nc("@option:check", "Enable humanized output")
+            checked: root.settings ? root.settings.humanizedOutput : false
+            onCheckedChanged: {
+                if (root.settings) {
+                    root.settings.humanizedOutput = checked;
+                }
+            }
+        }
+
+        QQC2.Label {
+            text: i18nc("@info", "Appends writing guidelines to the Soul system message so responses read more human. Increases token usage.")
+            font: Kirigami.Theme.smallFont
+            color: Kirigami.Theme.disabledTextColor
+            wrapMode: Text.WordWrap
+            Layout.fillWidth: true
+        }
+
+        Kirigami.Separator {
             Kirigami.FormData.label: i18nc("@title:group", "MCP (Model Context Protocol):")
             Kirigami.FormData.isSection: true
         }
