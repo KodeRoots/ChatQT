@@ -7,33 +7,103 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
+import Qt.labs.platform as Labs
 import org.kde.kirigami as Kirigami
+import org.kde.chatqt
 
 RowLayout {
     id: root
 
-    signal sendMessage(string message)
+    signal sendMessage(string message, var attachments)
     signal cancelOrStop()
 
     property bool isProviderConfigured: false
     property bool isLoading: false
     property bool isStreaming: false
+    property var attachedFiles: []
 
     property alias textField: messageField
 
     spacing: Kirigami.Units.smallSpacing
 
-    Item {
-        id: container
+    function sendCurrentMessage() {
+        root.sendMessage(messageField.text, root.attachedFiles)
+        messageField.text = ""
+        root.attachedFiles = []
+    }
 
+    function removeAttachment(index) {
+        root.attachedFiles = root.attachedFiles.filter(function(_, i) {
+            return i !== index
+        })
+    }
+
+    ColumnLayout {
         Layout.fillWidth: true
-        Layout.preferredHeight: Kirigami.Units.gridUnit * 6
+        spacing: Kirigami.Units.smallSpacing
 
         visible: root.isProviderConfigured
-        enabled: root.isProviderConfigured && !root.isLoading
 
-        Kirigami.Theme.colorSet: Kirigami.Theme.View
-        Kirigami.Theme.inherit: false
+        Flow {
+            Layout.fillWidth: true
+            visible: root.attachedFiles.length > 0
+            spacing: Kirigami.Units.smallSpacing
+
+            Repeater {
+                model: root.attachedFiles
+
+                delegate: Rectangle {
+                    implicitWidth: chipRow.implicitWidth + Kirigami.Units.smallSpacing * 2
+                    implicitHeight: chipRow.implicitHeight + Kirigami.Units.smallSpacing
+                    radius: implicitHeight / 2
+                    color: Kirigami.Theme.alternateBackgroundColor
+                    border.width: 1
+                    border.color: Qt.rgba(Kirigami.Theme.disabledTextColor.r, Kirigami.Theme.disabledTextColor.g, Kirigami.Theme.disabledTextColor.b, 0.3)
+
+                    RowLayout {
+                        id: chipRow
+                        anchors.centerIn: parent
+                        spacing: Kirigami.Units.smallSpacing
+
+                        Kirigami.Icon {
+                            source: modelData.isImage ? "image-x-generic-symbolic" : "text-x-generic-symbolic"
+                            implicitWidth: Kirigami.Units.iconSizes.small
+                            implicitHeight: Kirigami.Units.iconSizes.small
+                        }
+
+                        Controls.Label {
+                            text: modelData.name
+                            font: Kirigami.Theme.smallFont
+                            elide: Text.ElideMiddle
+                            Layout.maximumWidth: Kirigami.Units.gridUnit * 12
+                        }
+
+                        Controls.ToolButton {
+                            icon.name: "dialog-close-symbolic"
+                            icon.width: Kirigami.Units.iconSizes.small
+                            icon.height: Kirigami.Units.iconSizes.small
+                            display: Controls.AbstractButton.IconOnly
+                            onClicked: root.removeAttachment(index)
+
+                            Controls.ToolTip.text: i18n("Remove attachment")
+                            Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+                            Controls.ToolTip.visible: hovered
+                        }
+                    }
+                }
+            }
+        }
+
+        Item {
+            id: container
+
+            Layout.fillWidth: true
+            Layout.preferredHeight: Kirigami.Units.gridUnit * 6
+
+            enabled: root.isProviderConfigured && !root.isLoading
+
+            Kirigami.Theme.colorSet: Kirigami.Theme.View
+            Kirigami.Theme.inherit: false
 
         Rectangle {
             anchors.fill: parent
@@ -78,8 +148,7 @@ RowLayout {
                                 root.cancelOrStop()
                                 event.accepted = true
                             } else {
-                                root.sendMessage(messageField.text)
-                                messageField.text = ""
+                                root.sendCurrentMessage()
                             }
                         } else {
                             event.accepted = false;
@@ -96,6 +165,52 @@ RowLayout {
             }
         }
     }
+    }
+
+    Controls.Button {
+        id: attachButton
+
+        Layout.alignment: Qt.AlignBottom
+        Layout.preferredHeight: container.height
+
+        visible: root.isProviderConfigured
+        enabled: root.isProviderConfigured && !root.isLoading
+
+        icon.name: "mail-attachment-symbolic"
+        display: Controls.AbstractButton.IconOnly
+
+        Controls.ToolTip.text: i18n("Attach files")
+        Controls.ToolTip.delay: Kirigami.Units.toolTipDelay
+        Controls.ToolTip.visible: hovered
+
+        onClicked: fileDialog.open()
+    }
+
+    Labs.FileDialog {
+        id: fileDialog
+
+        fileMode: Labs.FileDialog.OpenFiles
+
+        onAccepted: {
+            var newFiles = root.attachedFiles.slice()
+            for (var i = 0; i < fileDialog.files.length; i++) {
+                var result = FileHelper.readFile(fileDialog.files[i])
+                if (result.success) {
+                    newFiles.push({
+                        "name": result.name,
+                        "mime": result.mime,
+                        "isImage": result.isImage,
+                        "content": result.content
+                    })
+                } else {
+                    applicationWindow().showPassiveNotification(
+                        i18n("Could not attach %1: %2", result.name, result.error)
+                    )
+                }
+            }
+            root.attachedFiles = newFiles
+        }
+    }
 
     Controls.Button {
         Layout.alignment: Qt.AlignBottom
@@ -105,7 +220,7 @@ RowLayout {
 
         // Dynamic enable state
         enabled: root.isProviderConfigured && (
-            root.isLoading ? true : !root.isLoading && messageField.text.trim()
+            root.isLoading ? true : messageField.text.trim().length > 0 || root.attachedFiles.length > 0
         )
 
         // Dynamic text
@@ -125,9 +240,8 @@ RowLayout {
         onClicked: {
             if (root.isLoading) {
                 root.cancelOrStop()
-            } else if (messageField.text.trim()) {
-                root.sendMessage(messageField.text)
-                messageField.text = ""
+            } else if (messageField.text.trim() || root.attachedFiles.length > 0) {
+                root.sendCurrentMessage()
             }
         }
     }

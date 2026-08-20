@@ -27,7 +27,19 @@ function requestOllama(modelsComboboxCurrentValue, promptArray, listModel, onStr
         "keep_alive": "5m",
         "stream": true,
         "options": {},
-        "messages": promptArray
+        "messages": promptArray.map(function(m) {
+            let msg = { "role": m.role, "content": m.content };
+            if (m.images && m.images.length > 0) {
+                msg["images"] = m.images;
+            }
+            if (m.tool_calls) {
+                msg["tool_calls"] = m.tool_calls;
+            }
+            if (m.tool_call_id) {
+                msg["tool_call_id"] = m.tool_call_id;
+            }
+            return msg;
+        })
     };
 
     if (thinkingEnabled === true) {
@@ -186,7 +198,32 @@ function requestOpenAICompatible(baseUrl, token, model, promptArray, thinkingEna
 
     let requestData = {
         "model": model,
-        "messages": promptArray,
+        "messages": promptArray.map(function(m) {
+            let msg = { "role": m.role };
+            if (m.images && m.images.length > 0) {
+                let parts = [];
+                if (m.content) {
+                    parts.push({ "type": "text", "text": m.content });
+                }
+                for (let i = 0; i < m.images.length; i++) {
+                    const mime = (m.imageMimes && m.imageMimes[i]) || "image/png";
+                    parts.push({
+                        "type": "image_url",
+                        "image_url": { "url": "data:" + mime + ";base64," + m.images[i] }
+                    });
+                }
+                msg["content"] = parts;
+            } else {
+                msg["content"] = m.content;
+            }
+            if (m.tool_calls) {
+                msg["tool_calls"] = m.tool_calls;
+            }
+            if (m.tool_call_id) {
+                msg["tool_call_id"] = m.tool_call_id;
+            }
+            return msg;
+        }),
         "stream": true
     };
 

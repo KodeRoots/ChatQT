@@ -743,11 +743,33 @@ Kirigami.Page {
         }
     }
 
-    function sendMessage(prompt) {
-        if (!prompt.trim() || isLoading) return;
+    function sendMessage(prompt, attachments) {
+        var files = attachments || [];
+        if ((!prompt.trim() && files.length === 0) || isLoading) return;
 
         lastSentMessage = prompt;
         isStreaming = false;
+
+        var content = prompt;
+        var images = [];
+        var imageMimes = [];
+        var attachmentNames = [];
+        for (var a = 0; a < files.length; a++) {
+            attachmentNames.push(files[a].name);
+            if (files[a].isImage) {
+                images.push(files[a].content);
+                imageMimes.push(files[a].mime);
+            } else {
+                content += "\n\n<file name=\"" + files[a].name + "\">\n" + files[a].content + "\n</file>";
+            }
+        }
+        if (content.trim() === "") {
+            content = i18n("What can you tell me about the attached files?");
+        }
+        var displayContent = prompt;
+        if (attachmentNames.length > 0) {
+            displayContent = (displayContent ? displayContent + "\n\n" : "") + i18n("Attachments: %1").arg(attachmentNames.join(", "));
+        }
 
         ensureSystemMessage()
 
@@ -768,14 +790,15 @@ Kirigami.Page {
                 }
             }
             currentSessionId = SessionStore.createSession(providerName, modelName)
-            var title = prompt.length > 50 ? prompt.substring(0, 50) + "…" : prompt
+            var titleSource = prompt.trim() ? prompt : attachmentNames.join(", ")
+            var title = titleSource.length > 50 ? titleSource.substring(0, 50) + "…" : titleSource
             SessionStore.updateSessionTitle(currentSessionId, title)
             refreshSessionList()
         }
 
         var capturedSessionId = currentSessionId
 
-        SessionStore.addMessage(currentSessionId, "user", prompt, "")
+        SessionStore.addMessage(currentSessionId, "user", displayContent, "")
 
         var currentProviderName = currentProvider
         var currentModelName = currentModel || ""
@@ -796,11 +819,11 @@ Kirigami.Page {
 
         listModel.append({
             "name": "User",
-            "content": prompt,
+            "content": displayContent,
             "thinkingContent": ""
         });
 
-        promptArray.push({ "role": "user", "content": prompt, "images": [] });
+        promptArray.push({ "role": "user", "content": content, "images": images, "imageMimes": imageMimes });
 
         sessionPromptArrays[capturedSessionId] = promptArray.slice()
 
@@ -1281,8 +1304,8 @@ Kirigami.Page {
                 }
             }
 
-            onSendMessage: function(message) {
-                root.sendMessage(message);
+            onSendMessage: function(message, attachments) {
+                root.sendMessage(message, attachments);
             }
         }
 

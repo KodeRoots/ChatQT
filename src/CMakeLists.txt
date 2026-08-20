@@ -12,6 +12,7 @@ target_sources(chatqt
     PRIVATE
     main.cpp
     sessionstore.cpp
+    filehelper.cpp
     hotreload.cpp
 )
 

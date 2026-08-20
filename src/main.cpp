@@ -20,6 +20,7 @@
 
 #include "chatqt_version.h"
 #include "sessionstore.h"
+#include "filehelper.h"
 #include "hotreload.h"
 
 int main(int argc, char *argv[])
@@ -62,6 +63,7 @@ int main(int argc, char *argv[])
     qWarning() << "About to register SessionStore";
     // Register SessionStore as singleton
     qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "SessionStore", SessionStore::instance());
+    qmlRegisterSingletonInstance("org.kde.chatqt", 1, 0, "FileHelper", FileHelper::instance());
     qWarning() << "SessionStore registered";
 
     QObject::connect(&engine, &QQmlApplicationEngine::warnings, [](const QList<QQmlError> &warnings) {
