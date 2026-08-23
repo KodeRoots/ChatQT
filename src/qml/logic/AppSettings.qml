@@ -32,16 +32,16 @@ QtObject {
 
     // Soul settings
     property string soulContent: _settings.value("soulContent", "")
-    property bool humanizedOutput: _settings.value("humanizedOutput", false)
+    property bool humanizedOutput: _settings.value("humanizedOutput", "false") === "true"
 
     // Provider enable/disable settings
-    property bool ollamaEnabled: _settings.value("ollamaEnabled", true)
+    property bool ollamaEnabled: _settings.value("ollamaEnabled", "true") === "true"
     property bool experimentalFeatures: typeof experimentalFeaturesEnabled !== 'undefined' ? experimentalFeaturesEnabled : false
 
-    property bool _openclawEnabledStored: _settings.value("openclawEnabled", false)
+    property bool _openclawEnabledStored: _settings.value("openclawEnabled", "false") === "true"
 
     property bool openclawEnabled: experimentalFeatures && _openclawEnabledStored
-    property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", true)
+    property bool openaiCompatibleEnabled: _settings.value("openaiCompatibleEnabled", "true") === "true"
 
     readonly property bool isOllama: provider === "ollama"
     readonly property bool isOpenClaw: provider === "openclaw"
